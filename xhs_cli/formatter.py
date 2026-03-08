@@ -59,15 +59,21 @@ def extract_note_id(id_or_url: str) -> str:
 
 
 def render_user_info(data: dict[str, Any]) -> None:
-    """Render user profile info as a Rich panel."""
-    basic = data.get("basic_info", {})
+    """Render user profile info as a Rich panel.
+
+    Handles both flat format (from /user/me) and nested format (from /user/otherinfo).
+    """
+    # Support both nested (basic_info.nickname) and flat (nickname) formats
+    basic = data.get("basic_info", data)
     interactions = data.get("interactions", [])
 
-    nickname = basic.get("nickname", "Unknown")
+    nickname = basic.get("nickname", basic.get("nick_name", "Unknown"))
     red_id = basic.get("red_id", "")
     desc = basic.get("desc", "")
     ip_location = basic.get("ip_location", "")
-    gender = "♂️" if basic.get("gender") == 0 else "♀️" if basic.get("gender") == 1 else ""
+    user_id = basic.get("user_id", data.get("user_id", ""))
+    gender_val = basic.get("gender")
+    gender = "♂️" if gender_val == 0 else "♀️" if gender_val == 1 else ""
 
     # Build interaction stats
     stats = {}
@@ -81,6 +87,8 @@ def render_user_info(data: dict[str, Any]) -> None:
     table.add_row("昵称", f"[bold]{nickname}[/bold] {gender}")
     if red_id:
         table.add_row("小红书号", red_id)
+    if user_id:
+        table.add_row("User ID", user_id)
     if desc:
         table.add_row("简介", desc)
     if ip_location:
@@ -93,6 +101,7 @@ def render_user_info(data: dict[str, Any]) -> None:
         table.add_row("获赞与收藏", format_count(stats["interaction"]))
 
     console.print(Panel(table, title=f"👤 {nickname}", border_style="blue"))
+
 
 
 def render_note(data: dict[str, Any]) -> None:
@@ -157,8 +166,8 @@ def render_search_results(data: dict[str, Any]) -> None:
 
     table = Table(title="搜索结果", show_lines=True)
     table.add_column("#", style="dim", width=3)
-    table.add_column("标题", min_width=20)
-    table.add_column("作者", min_width=8)
+    table.add_column("标题", width=30)
+    table.add_column("作者", width=10)
     table.add_column("❤️", justify="right", width=8)
     table.add_column("类型", width=4)
     table.add_column("ID", style="dim", width=24)
@@ -216,8 +225,8 @@ def render_feed(data: dict[str, Any]) -> None:
 
     table = Table(title="推荐页", show_lines=True)
     table.add_column("#", style="dim", width=3)
-    table.add_column("标题", min_width=20)
-    table.add_column("作者", min_width=8)
+    table.add_column("标题", width=30)
+    table.add_column("作者", width=10)
     table.add_column("❤️", justify="right", width=8)
     table.add_column("ID", style="dim", width=24)
 
@@ -242,7 +251,7 @@ def render_user_posts(notes: list[dict[str, Any]]) -> None:
 
     table = Table(title="用户笔记", show_lines=True)
     table.add_column("#", style="dim", width=3)
-    table.add_column("标题", min_width=20)
+    table.add_column("标题", width=30)
     table.add_column("❤️", justify="right", width=8)
     table.add_column("类型", width=4)
     table.add_column("ID", style="dim", width=24)
@@ -267,7 +276,7 @@ def render_topics(data: Any) -> None:
 
     table = Table(title="话题", show_lines=True)
     table.add_column("#", style="dim", width=3)
-    table.add_column("话题名", min_width=15)
+    table.add_column("话题名", width=15)
     table.add_column("热度", justify="right", width=10)
     table.add_column("ID", style="dim", width=24)
 
@@ -281,24 +290,38 @@ def render_topics(data: Any) -> None:
 
 
 def render_users(data: Any) -> None:
-    """Render user search results."""
-    users = data if isinstance(data, list) else data.get("user_info_dtos", data.get("users", []))
+    """Render user search/list results.
+
+    Handles:
+    - Creator search: {user_info_dtos: [{user_base_dto: {user_nickname, ...}, fans_total}]}
+    - Social API: {users: [{nickname, user_id, ...}]}
+    - Direct list: [{nickname, ...}]
+    """
+    if isinstance(data, list):
+        users = data
+    elif isinstance(data, dict):
+        users = data.get("user_info_dtos", data.get("users", data.get("items", [])))
+    else:
+        users = []
+
     if not users:
         print_info("No users found")
         return
 
-    table = Table(title="用户搜索结果", show_lines=True)
+    table = Table(title="用户列表", show_lines=True)
     table.add_column("#", style="dim", width=3)
-    table.add_column("昵称", min_width=12)
-    table.add_column("小红书号", min_width=10)
+    table.add_column("昵称", width=14)
+    table.add_column("小红书号", width=12)
     table.add_column("粉丝", justify="right", width=8)
     table.add_column("ID", style="dim", width=24)
 
     for i, u in enumerate(users, 1):
-        nickname = u.get("nickname", u.get("nick_name", ""))
-        red_id = u.get("red_id", "")
-        fans = format_count(u.get("fans", u.get("fansCount", 0)))
-        user_id = u.get("user_id", u.get("id", ""))
+        # Handle nested user_base_dto (Creator API) or flat format
+        base = u.get("user_base_dto", u)
+        nickname = base.get("user_nickname", base.get("nickname", base.get("nick_name", "")))
+        red_id = base.get("red_id", "")
+        fans = format_count(u.get("fans_total", base.get("fans", base.get("fansCount", 0))))
+        user_id = base.get("user_id", base.get("id", ""))
         table.add_row(str(i), nickname, red_id, fans, user_id)
 
     console.print(table)
@@ -313,7 +336,7 @@ def render_creator_notes(data: Any) -> None:
 
     table = Table(title="我的笔记", show_lines=True)
     table.add_column("#", style="dim", width=3)
-    table.add_column("标题", min_width=20)
+    table.add_column("标题", width=30)
     table.add_column("❤️", justify="right", width=8)
     table.add_column("💬", justify="right", width=6)
     table.add_column("状态", width=6)

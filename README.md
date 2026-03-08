@@ -66,12 +66,12 @@ xhs hot -c fashion                    # Categories: fashion, food, cosmetics,
                                       #   travel, fitness
 
 # ─── Social ───────────────────────────────────────
-xhs followers <user_id>               # User's fans
-xhs following <user_id>               # User's following
-xhs follow <user_id>                  # Follow a user
-xhs unfollow <user_id>                # Unfollow a user
-xhs user-collects <user_id>           # User's bookmarks
-xhs user-likes <user_id>              # User's liked notes
+xhs user-collects <user_id>           # User's bookmarks ✅
+xhs followers <user_id>               # ⚠️ experimental
+xhs following <user_id>               # ⚠️ experimental
+xhs follow <user_id>                  # ⚠️ experimental
+xhs unfollow <user_id>                # ⚠️ experimental
+xhs user-likes <user_id>              # ⚠️ experimental
 
 # ─── Interactions ─────────────────────────────────
 xhs like <note_id>                     # Like a note
@@ -90,11 +90,11 @@ xhs delete <note_id>                   # Delete note
 xhs delete <note_id> -y               # Skip confirmation
 
 # ─── Notifications ────────────────────────────────
-xhs notifications                      # Like notifications
-xhs notifications --type comments     # Comment notifications
-xhs notifications --type follows      # New followers
-xhs notifications --type mentions     # @mentions
+xhs notifications                      # ⚠️ experimental
+xhs notifications --type comments     # ⚠️ experimental
 ```
+
+> **⚠️ Experimental commands**: `followers`, `following`, `follow`, `unfollow`, `user-likes`, `notifications` — XHS web API 可能未公开这些端点，需要浏览器抓包获取正确路径后才能使用。
 
 ## Authentication
 
