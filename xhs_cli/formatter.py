@@ -1,8 +1,12 @@
 """Rich formatting utilities for XHS CLI output."""
 
 import json
+import os
+import sys
 from typing import Any
 
+import click
+import yaml
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -10,11 +14,58 @@ from rich.table import Table
 console = Console(stderr=True)
 error_console = Console(stderr=True)
 _stdout = Console()
+_OUTPUT_ENV = "OUTPUT"
+
+
+def resolve_output_format(*, as_json: bool, as_yaml: bool) -> str | None:
+    """Resolve explicit flags first, then env override, then TTY default."""
+    if as_json and as_yaml:
+        raise click.UsageError("Use only one of --json or --yaml.")
+    if as_yaml:
+        return "yaml"
+    if as_json:
+        return "json"
+
+    output_mode = os.getenv(_OUTPUT_ENV, "auto").strip().lower()
+    if output_mode == "yaml":
+        return "yaml"
+    if output_mode == "json":
+        return "json"
+    if output_mode == "rich":
+        return None
+
+    if not sys.stdout.isatty():
+        return "yaml"
+    return None
 
 
 def print_json(data: Any) -> None:
     """Print raw JSON output to stdout."""
     _stdout.print_json(json.dumps(data, ensure_ascii=False, indent=2))
+
+
+def print_yaml(data: Any) -> None:
+    """Print raw YAML output to stdout."""
+    click.echo(
+        yaml.safe_dump(
+            data,
+            allow_unicode=True,
+            sort_keys=False,
+            default_flow_style=False,
+        )
+    )
+
+
+def maybe_print_structured(data: Any, *, as_json: bool, as_yaml: bool) -> bool:
+    """Print structured output when requested or when stdout is non-TTY."""
+    fmt = resolve_output_format(as_json=as_json, as_yaml=as_yaml)
+    if not fmt:
+        return False
+    if fmt == "json":
+        print_json(data)
+    else:
+        print_yaml(data)
+    return True
 
 
 def print_error(message: str) -> None:
@@ -382,4 +433,3 @@ def render_notifications(data: dict[str, Any], notif_type: str) -> None:
         table.add_row(str(i), nickname, display, time_str)
 
     console.print(table)
-

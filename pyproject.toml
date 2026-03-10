@@ -24,6 +24,7 @@ dependencies = [
     "rich>=13.0",
     "browser-cookie3>=0.19",
     "pycryptodome>=3.20",
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]

@@ -6,9 +6,9 @@ from ..exceptions import NoCookieError, XhsApiError
 from ..formatter import (
     console,
     extract_note_id,
+    maybe_print_structured,
     print_error,
     print_info,
-    print_json,
     render_comments,
     render_creator_notes,
     render_feed,
@@ -43,8 +43,9 @@ TYPE_MAP = {
 @click.option("--type", "note_type", type=click.Choice(["all", "video", "image"]), default="all", help="Note type")
 @click.option("--page", default=1, help="Page number")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def search(ctx, keyword: str, sort: str, note_type: str, page: int, as_json: bool):
+def search(ctx, keyword: str, sort: str, note_type: str, page: int, as_json: bool, as_yaml: bool):
     """Search notes by keyword."""
     try:
         with _get_client(ctx) as client:
@@ -55,9 +56,7 @@ def search(ctx, keyword: str, sort: str, note_type: str, page: int, as_json: boo
                 note_type=TYPE_MAP[note_type],
             )
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_search_results(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -69,8 +68,9 @@ def search(ctx, keyword: str, sort: str, note_type: str, page: int, as_json: boo
 @click.argument("id_or_url")
 @click.option("--xsec-token", default="", help="Security token (auto-resolved if cached)")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def read(ctx, id_or_url: str, xsec_token: str, as_json: bool):
+def read(ctx, id_or_url: str, xsec_token: str, as_json: bool, as_yaml: bool):
     """Read a note by ID or URL."""
     note_id = extract_note_id(id_or_url)
 
@@ -78,9 +78,7 @@ def read(ctx, id_or_url: str, xsec_token: str, as_json: bool):
         with _get_client(ctx) as client:
             data = client.get_note_by_id(note_id, xsec_token=xsec_token)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_note(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -93,8 +91,9 @@ def read(ctx, id_or_url: str, xsec_token: str, as_json: bool):
 @click.option("--cursor", default="", help="Pagination cursor")
 @click.option("--xsec-token", default="", help="Security token")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def comments(ctx, id_or_url: str, cursor: str, xsec_token: str, as_json: bool):
+def comments(ctx, id_or_url: str, cursor: str, xsec_token: str, as_json: bool, as_yaml: bool):
     """Get comments for a note."""
     note_id = extract_note_id(id_or_url)
 
@@ -102,9 +101,7 @@ def comments(ctx, id_or_url: str, cursor: str, xsec_token: str, as_json: bool):
         with _get_client(ctx) as client:
             data = client.get_comments(note_id, cursor=cursor, xsec_token=xsec_token)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_comments(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -115,16 +112,15 @@ def comments(ctx, id_or_url: str, cursor: str, xsec_token: str, as_json: bool):
 @click.command()
 @click.argument("user_id")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def user(ctx, user_id: str, as_json: bool):
+def user(ctx, user_id: str, as_json: bool, as_yaml: bool):
     """View user profile info."""
     try:
         with _get_client(ctx) as client:
             data = client.get_user_info(user_id)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_user_info(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -136,16 +132,15 @@ def user(ctx, user_id: str, as_json: bool):
 @click.argument("user_id")
 @click.option("--cursor", default="", help="Pagination cursor")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def user_posts(ctx, user_id: str, cursor: str, as_json: bool):
+def user_posts(ctx, user_id: str, cursor: str, as_json: bool, as_yaml: bool):
     """List a user's published notes."""
     try:
         with _get_client(ctx) as client:
             data = client.get_user_notes(user_id, cursor=cursor)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             notes = data.get("notes", [])
             render_user_posts(notes)
             if data.get("has_more"):
@@ -159,16 +154,15 @@ def user_posts(ctx, user_id: str, cursor: str, as_json: bool):
 
 @click.command()
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def feed(ctx, as_json: bool):
+def feed(ctx, as_json: bool, as_yaml: bool):
     """Browse the recommendation feed."""
     try:
         with _get_client(ctx) as client:
             data = client.get_home_feed()
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_feed(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -179,16 +173,15 @@ def feed(ctx, as_json: bool):
 @click.command()
 @click.argument("keyword")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def topics(ctx, keyword: str, as_json: bool):
+def topics(ctx, keyword: str, as_json: bool, as_yaml: bool):
     """Search for topics/hashtags."""
     try:
         with _get_client(ctx) as client:
             data = client.search_topics(keyword)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_topics(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -201,16 +194,15 @@ def topics(ctx, keyword: str, as_json: bool):
 @click.argument("comment_id")
 @click.option("--cursor", default="", help="Pagination cursor")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def sub_comments(ctx, note_id: str, comment_id: str, cursor: str, as_json: bool):
+def sub_comments(ctx, note_id: str, comment_id: str, cursor: str, as_json: bool, as_yaml: bool):
     """View replies to a specific comment."""
     try:
         with _get_client(ctx) as client:
             data = client.get_sub_comments(note_id, comment_id, cursor=cursor)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_comments(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -221,16 +213,15 @@ def sub_comments(ctx, note_id: str, comment_id: str, cursor: str, as_json: bool)
 @click.command("search-user")
 @click.argument("keyword")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def search_user(ctx, keyword: str, as_json: bool):
+def search_user(ctx, keyword: str, as_json: bool, as_yaml: bool):
     """Search for users by keyword."""
     try:
         with _get_client(ctx) as client:
             data = client.search_users(keyword)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_users(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -241,16 +232,15 @@ def search_user(ctx, keyword: str, as_json: bool):
 @click.command("my-notes")
 @click.option("--page", default=0, help="Page number (0-indexed)")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def my_notes(ctx, page: int, as_json: bool):
+def my_notes(ctx, page: int, as_json: bool, as_yaml: bool):
     """List your own published notes."""
     try:
         with _get_client(ctx) as client:
             data = client.get_creator_note_list(page=page)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_creator_notes(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -280,16 +270,15 @@ HOT_CATEGORIES = {
     help="Category (fashion, food, cosmetics, movie, career, love, home, gaming, travel, fitness)",
 )
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def hot(ctx, category: str, as_json: bool):
+def hot(ctx, category: str, as_json: bool, as_yaml: bool):
     """Browse hot/trending notes by category."""
     try:
         with _get_client(ctx) as client:
             data = client.get_hot_feed(HOT_CATEGORIES[category])
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_feed(data)
 
     except (NoCookieError, XhsApiError) as e:
@@ -307,8 +296,9 @@ def hot(ctx, category: str, as_json: bool):
 @click.option("--cursor", default="", help="Pagination cursor")
 @click.option("--num", default=20, help="Number of items per page")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def notifications(ctx, notif_type: str, cursor: str, num: int, as_json: bool):
+def notifications(ctx, notif_type: str, cursor: str, num: int, as_json: bool, as_yaml: bool):
     """View notifications (mentions, likes, connections)."""
     try:
         with _get_client(ctx) as client:
@@ -319,9 +309,7 @@ def notifications(ctx, notif_type: str, cursor: str, num: int, as_json: bool):
             else:
                 data = client.get_notification_connections(cursor=cursor, num=num)
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_notifications(data, notif_type)
 
     except (NoCookieError, XhsApiError) as e:
@@ -331,16 +319,15 @@ def notifications(ctx, notif_type: str, cursor: str, num: int, as_json: bool):
 
 @click.command()
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def unread(ctx, as_json: bool):
+def unread(ctx, as_json: bool, as_yaml: bool):
     """Show unread notification counts."""
     try:
         with _get_client(ctx) as client:
             data = client.get_unread_count()
 
-        if as_json:
-            print_json(data)
-        else:
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             mentions = data.get("mentions", 0)
             likes = data.get("likes", 0)
             connections = data.get("connections", 0)
@@ -353,6 +340,4 @@ def unread(ctx, as_json: bool):
     except (NoCookieError, XhsApiError) as e:
         print_error(str(e))
         raise SystemExit(1) from None
-
-
 

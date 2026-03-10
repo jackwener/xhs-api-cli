@@ -5,13 +5,20 @@ import click
 from ..client import XhsClient
 from ..cookies import clear_cookies, get_cookies
 from ..exceptions import NoCookieError, XhsApiError
-from ..formatter import console, print_error, print_json, print_success, render_user_info
+from ..formatter import (
+    console,
+    maybe_print_structured,
+    print_error,
+    print_success,
+    render_user_info,
+)
 
 
 @click.command()
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def login(ctx, as_json: bool):
+def login(ctx, as_json: bool, as_yaml: bool):
     """Log in by extracting cookies from browser."""
     cookie_source = ctx.obj.get("cookie_source", "chrome") if ctx.obj else "chrome"
     try:
@@ -22,9 +29,7 @@ def login(ctx, as_json: bool):
         with XhsClient(cookies) as client:
             info = client.get_self_info()
 
-        if as_json:
-            print_json(info)
-        else:
+        if not maybe_print_structured(info, as_json=as_json, as_yaml=as_yaml):
             nickname = info.get("nickname", "Unknown")
             red_id = info.get("red_id", "")
             print_success(f"Logged in as: {nickname} (ID: {red_id})")
@@ -39,8 +44,9 @@ def login(ctx, as_json: bool):
 
 @click.command()
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def status(ctx, as_json: bool):
+def status(ctx, as_json: bool, as_yaml: bool):
     """Check current login status and user info."""
     cookie_source = ctx.obj.get("cookie_source", "chrome") if ctx.obj else "chrome"
     try:
@@ -48,9 +54,7 @@ def status(ctx, as_json: bool):
         with XhsClient(cookies) as client:
             info = client.get_self_info()
 
-        if as_json:
-            print_json(info)
-        else:
+        if not maybe_print_structured(info, as_json=as_json, as_yaml=as_yaml):
             nickname = info.get("nickname", "Unknown")
             red_id = info.get("red_id", "")
             ip_location = info.get("ip_location", "")
@@ -82,8 +86,9 @@ def logout():
 
 @click.command()
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
 @click.pass_context
-def whoami(ctx, as_json: bool):
+def whoami(ctx, as_json: bool, as_yaml: bool):
     """Show detailed profile of current user (level, fans, likes)."""
     cookie_source = ctx.obj.get("cookie_source", "chrome") if ctx.obj else "chrome"
     try:
@@ -91,9 +96,7 @@ def whoami(ctx, as_json: bool):
         with XhsClient(cookies) as client:
             info = client.get_self_info()
 
-        if as_json:
-            print_json(info)
-        else:
+        if not maybe_print_structured(info, as_json=as_json, as_yaml=as_yaml):
             render_user_info(info)
 
     except NoCookieError:
@@ -102,4 +105,3 @@ def whoami(ctx, as_json: bool):
     except XhsApiError as e:
         print_error(f"Failed to get profile: {e}")
         raise SystemExit(1) from None
-

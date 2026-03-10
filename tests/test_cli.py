@@ -1,5 +1,6 @@
 """Tests for CLI commands using Click's test runner."""
 
+import yaml
 from click.testing import CliRunner
 
 from xhs_cli.cli import cli
@@ -75,3 +76,27 @@ class TestCliBasic:
         result = runner.invoke(cli, ["my-notes", "--help"])
         assert result.exit_code == 0
 
+    def test_status_auto_yaml_when_stdout_is_not_tty(self, monkeypatch):
+        monkeypatch.setenv("OUTPUT", "auto")
+
+        class FakeClient:
+            def __init__(self, cookies):
+                self.cookies = cookies
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def get_self_info(self):
+                return {"nickname": "Alice", "red_id": "alice001"}
+
+        monkeypatch.setattr("xhs_cli.commands.auth.get_cookies", lambda source: {"a1": "cookie"})
+        monkeypatch.setattr("xhs_cli.commands.auth.XhsClient", FakeClient)
+
+        result = runner.invoke(cli, ["status"])
+
+        assert result.exit_code == 0
+        payload = yaml.safe_load(result.output)
+        assert payload["nickname"] == "Alice"

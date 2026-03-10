@@ -9,7 +9,7 @@
 
 ## Features
 
-- 🔐 **Auth** — auto-extract browser cookies, whoami
+- 🔐 **Auth** — auto-extract browser cookies, status, whoami
 - 🔍 **Search** — notes by keyword, user search, topic search
 - 📖 **Reading** — note detail, comments, sub-comments, user profiles
 - 📰 **Feed** — recommendation feed, hot/trending by category
@@ -17,7 +17,7 @@
 - 👍 **Interactions** — like, favorite, comment, reply, delete
 - ✍️ **Creator** — post image notes, delete notes, my-notes list
 - 🔔 **Notifications** — unread count, mentions, likes, new followers
-- 📊 **JSON output** — all commands support `--json` for scripting
+- 📊 **Structured output** — commands support `--yaml` and `--json`; non-TTY stdout defaults to YAML
 
 ## Installation
 
