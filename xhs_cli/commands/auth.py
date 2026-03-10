@@ -8,10 +8,10 @@ from ..formatter import (
     console,
     maybe_print_structured,
     print_success,
-    success_payload,
     render_user_info,
+    success_payload,
 )
-from ._common import exit_for_error, run_client_action
+from ._common import structured_output_options, exit_for_error, run_client_action
 
 
 def _xhs_user_payload(info: dict) -> dict[str, object]:
@@ -28,8 +28,7 @@ def _xhs_user_payload(info: dict) -> dict[str, object]:
 
 
 @click.command()
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def login(ctx, as_json: bool, as_yaml: bool):
     """Log in by extracting cookies from browser."""
@@ -53,8 +52,7 @@ def login(ctx, as_json: bool, as_yaml: bool):
 
 
 @click.command()
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def status(ctx, as_json: bool, as_yaml: bool):
     """Check current login status and user info."""
@@ -85,8 +83,7 @@ def status(ctx, as_json: bool, as_yaml: bool):
 
 
 @click.command()
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 def logout(as_json: bool, as_yaml: bool):
     """Clear saved cookies and log out."""
     clear_cookies()
@@ -96,8 +93,7 @@ def logout(as_json: bool, as_yaml: bool):
 
 
 @click.command()
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def whoami(ctx, as_json: bool, as_yaml: bool):
     """Show detailed profile of current user (level, fans, likes)."""

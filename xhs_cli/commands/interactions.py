@@ -3,14 +3,13 @@
 import click
 
 from ..formatter import extract_note_id, maybe_print_structured, print_success
-from ._common import exit_for_error, run_client_action
+from ._common import exit_for_error, run_client_action, structured_output_options
 
 
 @click.command()
 @click.argument("id_or_url")
 @click.option("--undo", is_flag=True, help="Unlike instead of like")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def like(ctx, id_or_url: str, undo: bool, as_json: bool, as_yaml: bool):
     """Like or unlike a note."""
@@ -28,8 +27,7 @@ def like(ctx, id_or_url: str, undo: bool, as_json: bool, as_yaml: bool):
 
 @click.command()
 @click.argument("id_or_url")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def favorite(ctx, id_or_url: str, as_json: bool, as_yaml: bool):
     """Favorite (bookmark) a note."""
@@ -47,8 +45,7 @@ def favorite(ctx, id_or_url: str, as_json: bool, as_yaml: bool):
 
 @click.command()
 @click.argument("id_or_url")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def unfavorite(ctx, id_or_url: str, as_json: bool, as_yaml: bool):
     """Unfavorite (unbookmark) a note."""
@@ -67,8 +64,7 @@ def unfavorite(ctx, id_or_url: str, as_json: bool, as_yaml: bool):
 @click.command()
 @click.argument("id_or_url")
 @click.option("--content", "-c", required=True, help="Comment content")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def comment(ctx, id_or_url: str, content: str, as_json: bool, as_yaml: bool):
     """Post a comment on a note."""
@@ -88,8 +84,7 @@ def comment(ctx, id_or_url: str, content: str, as_json: bool, as_yaml: bool):
 @click.argument("id_or_url")
 @click.option("--comment-id", required=True, help="Target comment ID to reply to")
 @click.option("--content", "-c", required=True, help="Reply content")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def reply(ctx, id_or_url: str, comment_id: str, content: str, as_json: bool, as_yaml: bool):
     """Reply to a specific comment."""
@@ -108,8 +103,7 @@ def reply(ctx, id_or_url: str, comment_id: str, content: str, as_json: bool, as_
 @click.command("delete-comment")
 @click.argument("note_id")
 @click.argument("comment_id")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
 @click.pass_context
 def delete_comment(ctx, note_id: str, comment_id: str, as_json: bool, as_yaml: bool, yes: bool):

@@ -18,7 +18,7 @@ from ..formatter import (
     render_user_posts,
     render_users,
 )
-from ._common import exit_for_error, run_client_action
+from ._common import exit_for_error, run_client_action, structured_output_options
 
 # ─── Sort mapping ────────────────────────────────────────────────────────────
 
@@ -40,8 +40,7 @@ TYPE_MAP = {
 @click.option("--sort", type=click.Choice(["general", "popular", "latest"]), default="general", help="Sort order")
 @click.option("--type", "note_type", type=click.Choice(["all", "video", "image"]), default="all", help="Note type")
 @click.option("--page", default=1, help="Page number")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def search(ctx, keyword: str, sort: str, note_type: str, page: int, as_json: bool, as_yaml: bool):
     """Search notes by keyword."""
@@ -66,8 +65,7 @@ def search(ctx, keyword: str, sort: str, note_type: str, page: int, as_json: boo
 @click.command()
 @click.argument("id_or_url")
 @click.option("--xsec-token", default="", help="Security token (auto-resolved if cached)")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def read(ctx, id_or_url: str, xsec_token: str, as_json: bool, as_yaml: bool):
     """Read a note by ID or URL."""
@@ -87,8 +85,7 @@ def read(ctx, id_or_url: str, xsec_token: str, as_json: bool, as_yaml: bool):
 @click.argument("id_or_url")
 @click.option("--cursor", default="", help="Pagination cursor")
 @click.option("--xsec-token", default="", help="Security token")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def comments(ctx, id_or_url: str, cursor: str, xsec_token: str, as_json: bool, as_yaml: bool):
     """Get comments for a note."""
@@ -109,8 +106,7 @@ def comments(ctx, id_or_url: str, cursor: str, xsec_token: str, as_json: bool, a
 
 @click.command()
 @click.argument("user_id")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def user(ctx, user_id: str, as_json: bool, as_yaml: bool):
     """View user profile info."""
@@ -127,8 +123,7 @@ def user(ctx, user_id: str, as_json: bool, as_yaml: bool):
 @click.command("user-posts")
 @click.argument("user_id")
 @click.option("--cursor", default="", help="Pagination cursor")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def user_posts(ctx, user_id: str, cursor: str, as_json: bool, as_yaml: bool):
     """List a user's published notes."""
@@ -147,8 +142,7 @@ def user_posts(ctx, user_id: str, cursor: str, as_json: bool, as_yaml: bool):
 
 
 @click.command()
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def feed(ctx, as_json: bool, as_yaml: bool):
     """Browse the recommendation feed."""
@@ -164,8 +158,7 @@ def feed(ctx, as_json: bool, as_yaml: bool):
 
 @click.command()
 @click.argument("keyword")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def topics(ctx, keyword: str, as_json: bool, as_yaml: bool):
     """Search for topics/hashtags."""
@@ -183,8 +176,7 @@ def topics(ctx, keyword: str, as_json: bool, as_yaml: bool):
 @click.argument("note_id")
 @click.argument("comment_id")
 @click.option("--cursor", default="", help="Pagination cursor")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def sub_comments(ctx, note_id: str, comment_id: str, cursor: str, as_json: bool, as_yaml: bool):
     """View replies to a specific comment."""
@@ -200,8 +192,7 @@ def sub_comments(ctx, note_id: str, comment_id: str, cursor: str, as_json: bool,
 
 @click.command("search-user")
 @click.argument("keyword")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def search_user(ctx, keyword: str, as_json: bool, as_yaml: bool):
     """Search for users by keyword."""
@@ -217,8 +208,7 @@ def search_user(ctx, keyword: str, as_json: bool, as_yaml: bool):
 
 @click.command("my-notes")
 @click.option("--page", default=0, help="Page number (0-indexed)")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def my_notes(ctx, page: int, as_json: bool, as_yaml: bool):
     """List your own published notes."""
@@ -253,8 +243,7 @@ HOT_CATEGORIES = {
     default="food",
     help="Category (fashion, food, cosmetics, movie, career, love, home, gaming, travel, fitness)",
 )
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def hot(ctx, category: str, as_json: bool, as_yaml: bool):
     """Browse hot/trending notes by category."""
@@ -277,8 +266,7 @@ def hot(ctx, category: str, as_json: bool, as_yaml: bool):
 )
 @click.option("--cursor", default="", help="Pagination cursor")
 @click.option("--num", default=20, help="Number of items per page")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def notifications(ctx, notif_type: str, cursor: str, num: int, as_json: bool, as_yaml: bool):
     """View notifications (mentions, likes, connections)."""
@@ -300,8 +288,7 @@ def notifications(ctx, notif_type: str, cursor: str, num: int, as_json: bool, as
 
 
 @click.command()
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def unread(ctx, as_json: bool, as_yaml: bool):
     """Show unread notification counts."""

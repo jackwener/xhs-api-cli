@@ -197,17 +197,17 @@ class XhsClient:
 
     # ─── Reading Endpoints ─────────────────────────────────────────────────
 
-    def get_self_info(self) -> Any:
+    def get_self_info(self) -> dict[str, Any]:
         """Get current user's profile info."""
         return self._main_api_get("/api/sns/web/v2/user/me")
 
-    def get_user_info(self, user_id: str) -> Any:
+    def get_user_info(self, user_id: str) -> dict[str, Any]:
         """Get another user's profile info."""
         return self._main_api_get("/api/sns/web/v1/user/otherinfo", {
             "target_user_id": user_id,
         })
 
-    def get_user_notes(self, user_id: str, cursor: str = "") -> Any:
+    def get_user_notes(self, user_id: str, cursor: str = "") -> dict[str, Any]:
         """Get a user's published notes."""
         return self._main_api_get("/api/sns/web/v1/user_posted", {
             "num": 30,
@@ -259,7 +259,7 @@ class XhsClient:
             "xsec_token": xsec_token,
         })
 
-    def get_home_feed(self, category: str = "homefeed_recommend") -> Any:
+    def get_home_feed(self, category: str = "homefeed_recommend") -> dict[str, Any]:
         """Get homepage recommendation feed."""
         return self._main_api_post("/api/sns/web/v1/homefeed", {
             "cursor_score": "",
@@ -306,7 +306,7 @@ class XhsClient:
 
     # ─── Interaction Endpoints ──────────────────────────────────────────────
 
-    def post_comment(self, note_id: str, content: str) -> Any:
+    def post_comment(self, note_id: str, content: str) -> dict[str, Any]:
         """Post a top-level comment on a note."""
         return self._main_api_post("/api/sns/web/v1/comment/post", {
             "note_id": note_id,
@@ -328,31 +328,31 @@ class XhsClient:
             "at_users": [],
         })
 
-    def like_note(self, note_id: str) -> Any:
+    def like_note(self, note_id: str) -> dict[str, Any]:
         """Like a note."""
         return self._main_api_post("/api/sns/web/v1/note/like", {
             "note_oid": note_id,
         })
 
-    def unlike_note(self, note_id: str) -> Any:
+    def unlike_note(self, note_id: str) -> dict[str, Any]:
         """Unlike a note."""
         return self._main_api_post("/api/sns/web/v1/note/dislike", {
             "note_oid": note_id,
         })
 
-    def favorite_note(self, note_id: str) -> Any:
+    def favorite_note(self, note_id: str) -> dict[str, Any]:
         """Favorite (bookmark) a note."""
         return self._main_api_post("/api/sns/web/v1/note/collect", {
             "note_id": note_id,
         })
 
-    def unfavorite_note(self, note_id: str) -> Any:
+    def unfavorite_note(self, note_id: str) -> dict[str, Any]:
         """Unfavorite (unbookmark) a note."""
         return self._main_api_post("/api/sns/web/v1/note/uncollect", {
             "note_ids": note_id,
         })
 
-    def delete_comment(self, note_id: str, comment_id: str) -> Any:
+    def delete_comment(self, note_id: str, comment_id: str) -> dict[str, Any]:
         """Delete a comment."""
         return self._main_api_post("/api/sns/web/v1/comment/delete", {
             "note_id": note_id,
@@ -361,7 +361,7 @@ class XhsClient:
 
     # ─── Creator/Posting Endpoints ────────────────────────────────────────
 
-    def search_topics(self, keyword: str) -> Any:
+    def search_topics(self, keyword: str) -> dict[str, Any]:
         """Search for topics/hashtags."""
         return self._creator_post("/web_api/sns/v1/search/topic", {
             "keyword": keyword,
@@ -369,7 +369,7 @@ class XhsClient:
             "page": {"page_size": 20, "page": 1},
         })
 
-    def search_users(self, keyword: str) -> Any:
+    def search_users(self, keyword: str) -> dict[str, Any]:
         """Search for users."""
         return self._creator_post("/web_api/sns/v1/search/user_info", {
             "keyword": keyword,
@@ -459,7 +459,7 @@ class XhsClient:
             "referer": f"{CREATOR_HOST}/",
         })
 
-    def delete_note(self, note_id: str) -> Any:
+    def delete_note(self, note_id: str) -> dict[str, Any]:
         """Delete a note."""
         try:
             return self._creator_post("/api/galaxy/creator/note/delete", {
@@ -474,7 +474,7 @@ class XhsClient:
                 ) from None
             raise
 
-    def get_creator_note_list(self, tab: int = 0, page: int = 0) -> Any:
+    def get_creator_note_list(self, tab: int = 0, page: int = 0) -> dict[str, Any]:
         """Get list of creator's own notes."""
         return self._creator_get("/api/galaxy/v2/creator/note/user/posted", {
             "tab": tab,
@@ -483,13 +483,13 @@ class XhsClient:
 
     # ─── P1: Social Graph Endpoints ───────────────────────────────────────
 
-    def follow_user(self, user_id: str) -> Any:
+    def follow_user(self, user_id: str) -> dict[str, Any]:
         """Follow a user."""
         return self._main_api_post("/api/sns/web/v1/user/follow", {
             "target_user_id": user_id,
         })
 
-    def unfollow_user(self, user_id: str) -> Any:
+    def unfollow_user(self, user_id: str) -> dict[str, Any]:
         """Unfollow a user."""
         return self._main_api_post("/api/sns/web/v1/user/unfollow", {
             "target_user_id": user_id,
@@ -497,7 +497,7 @@ class XhsClient:
 
     # ─── P1: Discovery Endpoints ──────────────────────────────────────────
 
-    def get_hot_feed(self, category: str = "homefeed.fashion_v3") -> Any:
+    def get_hot_feed(self, category: str = "homefeed.fashion_v3") -> dict[str, Any]:
         """Get hot/trending notes feed.
 
         Categories: homefeed.fashion_v3 (穿搭), homefeed.food_v3 (美食),
@@ -510,7 +510,7 @@ class XhsClient:
 
     # ─── P1: User Content Lists ───────────────────────────────────────────
 
-    def get_user_favorites(self, user_id: str, cursor: str = "") -> Any:
+    def get_user_favorites(self, user_id: str, cursor: str = "") -> dict[str, Any]:
         """Get a user's favorited (bookmarked) notes."""
         return self._main_api_get("/api/sns/web/v2/note/collect/page", {
             "user_id": user_id,
@@ -520,28 +520,28 @@ class XhsClient:
 
     # ─── P1: Notification Endpoints (reverse-engineered) ─────────────────
 
-    def get_unread_count(self) -> Any:
+    def get_unread_count(self) -> dict[str, Any]:
         """Get unread notification counts.
 
         Returns: {unread_count: int, likes: int, connections: int, mentions: int}
         """
         return self._main_api_get("/api/sns/web/unread_count", {})
 
-    def get_notification_mentions(self, cursor: str = "", num: int = 20) -> Any:
+    def get_notification_mentions(self, cursor: str = "", num: int = 20) -> dict[str, Any]:
         """Get comment and @mention notifications."""
         return self._main_api_get("/api/sns/web/v1/you/mentions", {
             "num": num,
             "cursor": cursor,
         })
 
-    def get_notification_likes(self, cursor: str = "", num: int = 20) -> Any:
+    def get_notification_likes(self, cursor: str = "", num: int = 20) -> dict[str, Any]:
         """Get like and collect notifications."""
         return self._main_api_get("/api/sns/web/v1/you/likes", {
             "num": num,
             "cursor": cursor,
         })
 
-    def get_notification_connections(self, cursor: str = "", num: int = 20) -> Any:
+    def get_notification_connections(self, cursor: str = "", num: int = 20) -> dict[str, Any]:
         """Get new follower notifications."""
         return self._main_api_get("/api/sns/web/v1/you/connections", {
             "num": num,
@@ -550,7 +550,7 @@ class XhsClient:
 
     # ─── HTML Fallback ────────────────────────────────────────────────────
 
-    def get_note_from_html(self, note_id: str, xsec_token: str) -> Any:
+    def get_note_from_html(self, note_id: str, xsec_token: str) -> dict[str, Any]:
         """Fallback: extract note data from HTML page's __INITIAL_STATE__."""
         import re
 

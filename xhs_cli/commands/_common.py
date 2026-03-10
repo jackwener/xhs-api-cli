@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Callable, TypeVar
+from collections.abc import Callable
+from typing import TypeVar
+
+import click
 
 from ..client import XhsClient
 from ..cookies import get_cookies
@@ -18,6 +21,13 @@ from ..exceptions import (
 from ..formatter import emit_error, print_error
 
 T = TypeVar("T")
+
+
+def structured_output_options(command: Callable) -> Callable:
+    """Add --json/--yaml options to a Click command."""
+    command = click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML.")(command)
+    command = click.option("--json", "as_json", is_flag=True, help="Output as JSON.")(command)
+    return command
 
 
 def _cookie_source(ctx) -> str:

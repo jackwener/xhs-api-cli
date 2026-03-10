@@ -6,8 +6,8 @@ import json
 import logging
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from .constants import CONFIG_DIR_NAME, COOKIE_FILE
 

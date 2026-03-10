@@ -3,7 +3,7 @@
 import click
 
 from ..formatter import extract_note_id, maybe_print_structured, print_info, print_success
-from ._common import exit_for_error, run_client_action
+from ._common import exit_for_error, run_client_action, structured_output_options
 
 
 @click.command()
@@ -12,8 +12,7 @@ from ._common import exit_for_error, run_client_action
 @click.option("--images", required=True, multiple=True, help="Image file path(s)")
 @click.option("--topic", default=None, help="Topic/hashtag to search and attach")
 @click.option("--private", "is_private", is_flag=True, help="Publish as private note")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def post(
     ctx,
@@ -66,8 +65,7 @@ def post(
 
 @click.command("delete")
 @click.argument("id_or_url")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
 @click.pass_context
 def delete(ctx, id_or_url: str, as_json: bool, as_yaml: bool, yes: bool):

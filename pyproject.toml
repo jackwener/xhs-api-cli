@@ -28,12 +28,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=8.0",
-    "pytest-asyncio>=0.23",
-    "ruff>=0.11.0",
-    "mypy>=1.15.0",
-]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.11.0", "mypy>=1.15.0"]
 
 [project.urls]
 Homepage = "https://github.com/jackwener/xiaohongshu-cli"
@@ -62,6 +57,4 @@ check_untyped_defs = true
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-m 'not smoke'"
-markers = [
-    "smoke: real-API integration tests (run with: pytest -m smoke)",
-]
+markers = ["smoke: real-API integration tests (run with: pytest -m smoke)"]

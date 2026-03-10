@@ -11,8 +11,8 @@ Only read-only operations are tested — no writes.
 
 from __future__ import annotations
 
-import yaml
 import pytest
+import yaml
 from click.testing import CliRunner
 
 from xhs_cli.cli import cli

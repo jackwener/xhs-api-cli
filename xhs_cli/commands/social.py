@@ -3,13 +3,12 @@
 import click
 
 from ..formatter import maybe_print_structured, print_info, print_success
-from ._common import exit_for_error, run_client_action
+from ._common import structured_output_options, exit_for_error, run_client_action
 
 
 @click.command()
 @click.argument("user_id")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def follow(ctx, user_id: str, as_json: bool, as_yaml: bool):
     """Follow a user."""
@@ -25,8 +24,7 @@ def follow(ctx, user_id: str, as_json: bool, as_yaml: bool):
 
 @click.command()
 @click.argument("user_id")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def unfollow(ctx, user_id: str, as_json: bool, as_yaml: bool):
     """Unfollow a user."""
@@ -43,8 +41,7 @@ def unfollow(ctx, user_id: str, as_json: bool, as_yaml: bool):
 @click.command()
 @click.argument("user_id")
 @click.option("--cursor", default="", help="Pagination cursor")
-@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+@structured_output_options
 @click.pass_context
 def favorites(ctx, user_id: str, cursor: str, as_json: bool, as_yaml: bool):
     """List a user's favorited (bookmarked) notes."""
