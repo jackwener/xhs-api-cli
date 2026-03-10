@@ -485,11 +485,14 @@ def render_notifications(data: dict[str, Any], notif_type: str) -> None:
     table.add_column("时间", width=12)
 
     for i, msg in enumerate(messages[:20], 1):
-        user = msg.get("user", {})
+        # API uses "user_info" not "user"
+        user = msg.get("user_info", {}) or {}
         nickname = user.get("nickname", "")
         title = msg.get("title", "")
-        content = msg.get("content", "")
-        display = f"{title}" + (f": {content[:30]}" if content else "")
+        # Try to get note content from item_info
+        item = msg.get("item_info", {}) or {}
+        note_content = item.get("content", "")
+        display = title + (f"\n{note_content[:30]}" if note_content else "")
         ts = msg.get("time", 0)
         time_str = _time.strftime("%m-%d %H:%M", _time.localtime(ts)) if ts else ""
         table.add_row(str(i), nickname, display, time_str)
