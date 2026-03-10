@@ -1,14 +1,26 @@
 """Cookie extraction and management for XHS API client."""
 
+from __future__ import annotations
+
 import json
 import logging
 import subprocess
 import sys
 from pathlib import Path
+from typing import Callable
 
 from .constants import CONFIG_DIR_NAME, COOKIE_FILE
 
 logger = logging.getLogger(__name__)
+
+BrowserLoader = Callable[..., object]
+SUPPORTED_BROWSERS: dict[str, str] = {
+    "chrome": "chrome",
+    "firefox": "firefox",
+    "edge": "edge",
+    "safari": "safari",
+    "brave": "brave",
+}
 
 
 def get_config_dir() -> Path:
@@ -54,12 +66,47 @@ def clear_cookies() -> None:
         logger.debug("Cleared cookies from %s", cookie_path)
 
 
-def extract_browser_cookies(source: str = "chrome") -> dict[str, str] | None:
-    """
-    Extract XHS cookies from browser using browser-cookie3.
+def _browser_loaders() -> dict[str, BrowserLoader]:
+    import browser_cookie3 as bc3
 
-    Runs in a subprocess to avoid SQLite DB locks when the browser is running.
-    """
+    return {
+        "chrome": bc3.chrome,
+        "firefox": bc3.firefox,
+        "edge": bc3.edge,
+        "safari": bc3.safari,
+        "brave": bc3.brave,
+    }
+
+
+def _extract_in_process(source: str) -> dict[str, str] | None:
+    """Extract cookies in-process for macOS Keychain compatibility."""
+    try:
+        loader = _browser_loaders().get(source)
+    except ImportError:
+        logger.debug("browser_cookie3 not installed, skipping in-process extraction")
+        return None
+
+    if loader is None:
+        logger.debug("Unsupported browser source: %s", source)
+        return None
+
+    try:
+        jar = loader(domain_name=".xiaohongshu.com")
+    except Exception as exc:
+        logger.debug("%s in-process extraction failed: %s", source, exc)
+        return None
+
+    cookies = {cookie.name: cookie.value for cookie in jar if "xiaohongshu.com" in (cookie.domain or "")}
+    if cookies.get("a1"):
+        logger.debug("Loaded XHS cookies from %s in-process", source)
+        return cookies
+
+    logger.debug("No usable a1 cookie found in %s in-process extraction", source)
+    return None
+
+
+def _extract_via_subprocess(source: str) -> dict[str, str] | None:
+    """Extract cookies via subprocess to avoid browser SQLite locks."""
     extract_script = '''
 import json, sys
 try:
@@ -120,7 +167,20 @@ except Exception as e:
         return None
 
 
-def get_cookies(cookie_source: str = "chrome") -> dict[str, str]:
+def extract_browser_cookies(source: str = "chrome") -> dict[str, str] | None:
+    """
+    Extract XHS cookies from browser using browser-cookie3.
+
+    macOS requires an in-process attempt for Keychain-backed browsers; when that
+    fails we fall back to a subprocess to avoid SQLite DB locks.
+    """
+    cookies = _extract_in_process(source)
+    if cookies:
+        return cookies
+    return _extract_via_subprocess(source)
+
+
+def get_cookies(cookie_source: str = "chrome", *, force_refresh: bool = False) -> dict[str, str]:
     """
     Multi-strategy cookie acquisition.
 
@@ -129,9 +189,10 @@ def get_cookies(cookie_source: str = "chrome") -> dict[str, str]:
     3. Raise error if all fail
     """
     # 1. Try saved cookies first
-    saved = load_saved_cookies()
-    if saved:
-        return saved
+    if not force_refresh:
+        saved = load_saved_cookies()
+        if saved:
+            return saved
 
     # 2. Try browser extraction
     from .exceptions import NoCookieError

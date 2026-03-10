@@ -2,9 +2,8 @@
 
 import click
 
-from ..exceptions import NoCookieError, XhsApiError
-from ..formatter import extract_note_id, maybe_print_structured, print_error, print_info, print_success
-from ._common import get_client as _get_client
+from ..formatter import extract_note_id, maybe_print_structured, print_info, print_success
+from ._common import exit_for_error, run_client_action
 
 
 @click.command()
@@ -28,8 +27,7 @@ def post(
 ):
     """Publish an image note."""
     try:
-        with _get_client(ctx) as client:
-            # Upload images
+        def _publish(client):
             file_ids = []
             for img_path in images:
                 print_info(f"Uploading {img_path}...")
@@ -38,7 +36,6 @@ def post(
                 file_ids.append(permit["fileId"])
                 print_success(f"Uploaded: {img_path}")
 
-            # Search topic if provided
             topics = []
             if topic:
                 topic_data = client.search_topics(topic)
@@ -51,8 +48,7 @@ def post(
                         "type": "topic",
                     })
 
-            # Create note
-            data = client.create_image_note(
+            return client.create_image_note(
                 title=title,
                 desc=body,
                 image_file_ids=file_ids,
@@ -60,12 +56,12 @@ def post(
                 is_private=is_private,
             )
 
-            if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
-                print_success(f"Note published: {title}" + (" (private)" if is_private else ""))
+        data = run_client_action(ctx, _publish)
+        if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
+            print_success(f"Note published: {title}" + (" (private)" if is_private else ""))
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command("delete")
@@ -75,19 +71,17 @@ def post(
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
 @click.pass_context
 def delete(ctx, id_or_url: str, as_json: bool, as_yaml: bool, yes: bool):
-    """Delete a note."""
+    """Delete a note. Experimental: the public web endpoint is unstable."""
     note_id = extract_note_id(id_or_url)
 
     if not yes:
         click.confirm(f"Delete note {note_id}?", abort=True)
 
     try:
-        with _get_client(ctx) as client:
-            data = client.delete_note(note_id)
+        data = run_client_action(ctx, lambda client: client.delete_note(note_id))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             print_success(f"Deleted note {note_id}")
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)

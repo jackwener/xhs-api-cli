@@ -2,12 +2,10 @@
 
 import click
 
-from ..exceptions import NoCookieError, XhsApiError
 from ..formatter import (
     console,
     extract_note_id,
     maybe_print_structured,
-    print_error,
     print_info,
     render_comments,
     render_creator_notes,
@@ -20,7 +18,7 @@ from ..formatter import (
     render_user_posts,
     render_users,
 )
-from ._common import get_client as _get_client
+from ._common import exit_for_error, run_client_action
 
 # ─── Sort mapping ────────────────────────────────────────────────────────────
 
@@ -48,20 +46,21 @@ TYPE_MAP = {
 def search(ctx, keyword: str, sort: str, note_type: str, page: int, as_json: bool, as_yaml: bool):
     """Search notes by keyword."""
     try:
-        with _get_client(ctx) as client:
-            data = client.search_notes(
+        data = run_client_action(
+            ctx,
+            lambda client: client.search_notes(
                 keyword=keyword,
                 page=page,
                 sort=SORT_MAP[sort],
                 note_type=TYPE_MAP[note_type],
-            )
+            ),
+        )
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_search_results(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command()
@@ -75,15 +74,13 @@ def read(ctx, id_or_url: str, xsec_token: str, as_json: bool, as_yaml: bool):
     note_id = extract_note_id(id_or_url)
 
     try:
-        with _get_client(ctx) as client:
-            data = client.get_note_by_id(note_id, xsec_token=xsec_token)
+        data = run_client_action(ctx, lambda client: client.get_note_by_id(note_id, xsec_token=xsec_token))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_note(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command()
@@ -98,15 +95,16 @@ def comments(ctx, id_or_url: str, cursor: str, xsec_token: str, as_json: bool, a
     note_id = extract_note_id(id_or_url)
 
     try:
-        with _get_client(ctx) as client:
-            data = client.get_comments(note_id, cursor=cursor, xsec_token=xsec_token)
+        data = run_client_action(
+            ctx,
+            lambda client: client.get_comments(note_id, cursor=cursor, xsec_token=xsec_token),
+        )
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_comments(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command()
@@ -117,15 +115,13 @@ def comments(ctx, id_or_url: str, cursor: str, xsec_token: str, as_json: bool, a
 def user(ctx, user_id: str, as_json: bool, as_yaml: bool):
     """View user profile info."""
     try:
-        with _get_client(ctx) as client:
-            data = client.get_user_info(user_id)
+        data = run_client_action(ctx, lambda client: client.get_user_info(user_id))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_user_info(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command("user-posts")
@@ -137,8 +133,7 @@ def user(ctx, user_id: str, as_json: bool, as_yaml: bool):
 def user_posts(ctx, user_id: str, cursor: str, as_json: bool, as_yaml: bool):
     """List a user's published notes."""
     try:
-        with _get_client(ctx) as client:
-            data = client.get_user_notes(user_id, cursor=cursor)
+        data = run_client_action(ctx, lambda client: client.get_user_notes(user_id, cursor=cursor))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             notes = data.get("notes", [])
@@ -147,9 +142,8 @@ def user_posts(ctx, user_id: str, cursor: str, as_json: bool, as_yaml: bool):
                 cursor = data.get("cursor", "")
                 print_info(f"More notes available — use --cursor {cursor}")
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command()
@@ -159,15 +153,13 @@ def user_posts(ctx, user_id: str, cursor: str, as_json: bool, as_yaml: bool):
 def feed(ctx, as_json: bool, as_yaml: bool):
     """Browse the recommendation feed."""
     try:
-        with _get_client(ctx) as client:
-            data = client.get_home_feed()
+        data = run_client_action(ctx, lambda client: client.get_home_feed())
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_feed(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command()
@@ -178,15 +170,13 @@ def feed(ctx, as_json: bool, as_yaml: bool):
 def topics(ctx, keyword: str, as_json: bool, as_yaml: bool):
     """Search for topics/hashtags."""
     try:
-        with _get_client(ctx) as client:
-            data = client.search_topics(keyword)
+        data = run_client_action(ctx, lambda client: client.search_topics(keyword))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_topics(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command("sub-comments")
@@ -199,15 +189,13 @@ def topics(ctx, keyword: str, as_json: bool, as_yaml: bool):
 def sub_comments(ctx, note_id: str, comment_id: str, cursor: str, as_json: bool, as_yaml: bool):
     """View replies to a specific comment."""
     try:
-        with _get_client(ctx) as client:
-            data = client.get_sub_comments(note_id, comment_id, cursor=cursor)
+        data = run_client_action(ctx, lambda client: client.get_sub_comments(note_id, comment_id, cursor=cursor))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_comments(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command("search-user")
@@ -218,15 +206,13 @@ def sub_comments(ctx, note_id: str, comment_id: str, cursor: str, as_json: bool,
 def search_user(ctx, keyword: str, as_json: bool, as_yaml: bool):
     """Search for users by keyword."""
     try:
-        with _get_client(ctx) as client:
-            data = client.search_users(keyword)
+        data = run_client_action(ctx, lambda client: client.search_users(keyword))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_users(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command("my-notes")
@@ -237,15 +223,13 @@ def search_user(ctx, keyword: str, as_json: bool, as_yaml: bool):
 def my_notes(ctx, page: int, as_json: bool, as_yaml: bool):
     """List your own published notes."""
     try:
-        with _get_client(ctx) as client:
-            data = client.get_creator_note_list(page=page)
+        data = run_client_action(ctx, lambda client: client.get_creator_note_list(page=page))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_creator_notes(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 HOT_CATEGORIES = {
@@ -275,15 +259,13 @@ HOT_CATEGORIES = {
 def hot(ctx, category: str, as_json: bool, as_yaml: bool):
     """Browse hot/trending notes by category."""
     try:
-        with _get_client(ctx) as client:
-            data = client.get_hot_feed(HOT_CATEGORIES[category])
+        data = run_client_action(ctx, lambda client: client.get_hot_feed(HOT_CATEGORIES[category]))
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_feed(data)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command()
@@ -301,20 +283,20 @@ def hot(ctx, category: str, as_json: bool, as_yaml: bool):
 def notifications(ctx, notif_type: str, cursor: str, num: int, as_json: bool, as_yaml: bool):
     """View notifications (mentions, likes, connections)."""
     try:
-        with _get_client(ctx) as client:
+        def _load_notifications(client):
             if notif_type == "mentions":
-                data = client.get_notification_mentions(cursor=cursor, num=num)
-            elif notif_type == "likes":
-                data = client.get_notification_likes(cursor=cursor, num=num)
-            else:
-                data = client.get_notification_connections(cursor=cursor, num=num)
+                return client.get_notification_mentions(cursor=cursor, num=num)
+            if notif_type == "likes":
+                return client.get_notification_likes(cursor=cursor, num=num)
+            return client.get_notification_connections(cursor=cursor, num=num)
+
+        data = run_client_action(ctx, _load_notifications)
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             render_notifications(data, notif_type)
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command()
@@ -324,8 +306,7 @@ def notifications(ctx, notif_type: str, cursor: str, num: int, as_json: bool, as
 def unread(ctx, as_json: bool, as_yaml: bool):
     """Show unread notification counts."""
     try:
-        with _get_client(ctx) as client:
-            data = client.get_unread_count()
+        data = run_client_action(ctx, lambda client: client.get_unread_count())
 
         if not maybe_print_structured(data, as_json=as_json, as_yaml=as_yaml):
             mentions = data.get("mentions", 0)
@@ -337,7 +318,5 @@ def unread(ctx, as_json: bool, as_yaml: bool):
             console.print(f"   ❤️ 赞和收藏: {likes}")
             console.print(f"   👥 新增关注: {connections}")
 
-    except (NoCookieError, XhsApiError) as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
-
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml)

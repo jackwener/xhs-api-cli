@@ -23,6 +23,7 @@ from .exceptions import (
     NeedVerifyError,
     SessionExpiredError,
     SignatureError,
+    UnsupportedOperationError,
     XhsApiError,
 )
 from .signing import build_get_uri, sign_main_api
@@ -348,7 +349,7 @@ class XhsClient:
     def unfavorite_note(self, note_id: str) -> Any:
         """Unfavorite (unbookmark) a note."""
         return self._main_api_post("/api/sns/web/v1/note/uncollect", {
-            "note_id": note_id,
+            "note_ids": note_id,
         })
 
     def delete_comment(self, note_id: str, comment_id: str) -> Any:
@@ -460,22 +461,27 @@ class XhsClient:
 
     def delete_note(self, note_id: str) -> Any:
         """Delete a note."""
-        return self._creator_post("/api/galaxy/creator/note/delete", {
-            "note_id": note_id,
-        })
+        try:
+            return self._creator_post("/api/galaxy/creator/note/delete", {
+                "note_id": note_id,
+            })
+        except XhsApiError as exc:
+            response = exc.response if isinstance(exc.response, dict) else {}
+            if response.get("status") == 404 or "404" in str(exc):
+                raise UnsupportedOperationError(
+                    "Delete note is currently unavailable from the public web API. "
+                    "The command remains experimental until the new endpoint is re-captured."
+                ) from None
+            raise
 
     def get_creator_note_list(self, tab: int = 0, page: int = 0) -> Any:
         """Get list of creator's own notes."""
-        return self._creator_get("/api/galaxy/creator/note/user/posted", {
+        return self._creator_get("/api/galaxy/v2/creator/note/user/posted", {
             "tab": tab,
             "page": page,
         })
 
     # ─── P1: Social Graph Endpoints ───────────────────────────────────────
-
-    # NOTE: XHS Web API does NOT expose follower/following list endpoints.
-    # These are mobile-only features. The follow/unfollow POST endpoints
-    # exist but return {code: -1} — may need additional parameters.
 
     def follow_user(self, user_id: str) -> Any:
         """Follow a user."""

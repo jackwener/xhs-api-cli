@@ -20,25 +20,37 @@ import pytest
 
 from xhs_cli.client import XhsClient
 from xhs_cli.cookies import get_cookies
-from xhs_cli.exceptions import NoCookieError, XhsApiError
+from xhs_cli.exceptions import NoCookieError, SessionExpiredError, XhsApiError
 
 
 def _get_test_cookies():
-    """Try to get cookies for integration testing."""
+    """Try to get valid cookies for integration testing."""
     try:
-        return get_cookies("chrome")
+        cookies = get_cookies("chrome")
+        with XhsClient(cookies) as client:
+            client.get_self_info()
+        return cookies
+    except SessionExpiredError:
+        try:
+            cookies = get_cookies("chrome", force_refresh=True)
+            with XhsClient(cookies) as client:
+                client.get_self_info()
+            return cookies
+        except (NoCookieError, SessionExpiredError, XhsApiError, Exception):
+            return None
     except (NoCookieError, Exception):
         return None
 
 
-# Skip all integration tests if no cookies available
+# Skip all integration tests if no valid cookies are available
 cookies = _get_test_cookies()
-pytestmark = pytest.mark.skipif(cookies is None, reason="No XHS cookies available for integration testing")
+pytestmark = pytest.mark.skipif(cookies is None, reason="No valid XHS cookies available for integration testing")
 
 # Cached values (discovered once, reused across tests)
 _CACHED_NOTE_ID = None
 _CACHED_XSEC_TOKEN = None
 _CACHED_USER_ID = None
+_CACHED_OTHER_USER_ID = None
 
 
 def _ensure_test_note(client: XhsClient) -> tuple[str, str]:
@@ -72,6 +84,24 @@ def _ensure_self_user_id(client: XhsClient) -> str:
         pytest.skip("Cannot determine current user ID")
 
     return _CACHED_USER_ID
+
+
+def _ensure_other_user_id(client: XhsClient) -> str:
+    """Find another user ID for safe follow/unfollow testing."""
+    global _CACHED_OTHER_USER_ID
+    if _CACHED_OTHER_USER_ID:
+        return _CACHED_OTHER_USER_ID
+
+    self_user_id = _ensure_self_user_id(client)
+    data = client.search_users("美食达人")
+    users = data.get("user_info_dtos", []) if isinstance(data, dict) else []
+    for item in users:
+        user_id = item.get("user_base_dto", {}).get("user_id", "")
+        if user_id and user_id != self_user_id:
+            _CACHED_OTHER_USER_ID = user_id
+            return user_id
+
+    pytest.skip("No other user found for follow/unfollow testing")
 
 
 @pytest.fixture
@@ -212,6 +242,8 @@ class TestUserContent:
         time.sleep(1)
         data = client.get_creator_note_list()
         assert data is not None
+        assert "notes" in data
+        assert "page" in data
 
 
 # ─── Notifications ───────────────────────────────────────────────────────────
@@ -367,6 +399,31 @@ class TestEndToEnd:
                 time.sleep(1)
                 try:
                     client.unlike_note(note_id)
+                except XhsApiError:
+                    pass
+
+
+class TestFollowPair:
+    """follow + unfollow → net effect = zero."""
+
+    def test_follow_then_unfollow(self, client: XhsClient):
+        time.sleep(1)
+        user_id = _ensure_other_user_id(client)
+
+        time.sleep(1)
+        followed = False
+        try:
+            result = client.follow_user(user_id)
+            followed = True
+            assert isinstance(result, dict)
+            assert result.get("fstatus") in {"follows", "followed"}
+        finally:
+            if followed:
+                time.sleep(1)
+                try:
+                    undo = client.unfollow_user(user_id)
+                    assert isinstance(undo, dict)
+                    assert undo.get("fstatus") in {"none", "unfollowed"}
                 except XhsApiError:
                     pass
 

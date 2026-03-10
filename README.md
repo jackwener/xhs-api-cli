@@ -15,7 +15,7 @@
 - 📰 **Feed** — recommendation feed, hot/trending by category
 - 👥 **Social** — follow/unfollow, favorites
 - 👍 **Interactions** — like, favorite, comment, reply, delete
-- ✍️ **Creator** — post image notes, delete notes, my-notes list
+- ✍️ **Creator** — post image notes, my-notes list, experimental delete
 - 🔔 **Notifications** — unread count, mentions, likes, new followers
 - 📊 **Structured output** — commands support `--yaml` and `--json`; non-TTY stdout defaults to YAML
 - 📦 **Stable envelope** — see [SCHEMA.md](./SCHEMA.md) for `ok/schema_version/data/error`
@@ -41,6 +41,7 @@ xhs status                            # Check login status
 xhs whoami                            # Detailed profile (fans, likes, etc)
 xhs whoami --json                     # Structured JSON envelope
 xhs logout                            # Clear saved cookies
+xhs logout --yaml                     # Structured success envelope
 
 # ─── Search ───────────────────────────────────────
 xhs search "美食"                      # Search notes
@@ -81,10 +82,10 @@ xhs reply <note_id> --comment-id X -c "回复"  # Reply to comment
 xhs delete-comment <note_id> <cmt_id> # Delete own comment
 
 # ─── Creator ─────────────────────────────────────
-xhs my-notes                           # List own notes
+xhs my-notes                           # List own notes (v2 creator endpoint)
 xhs my-notes --page 1                 # Next page
 xhs post --title "标题" --body "正文" --images img.jpg  # Post note
-xhs delete <note_id>                   # Delete note
+xhs delete <note_id>                   # Experimental: delete note
 xhs delete <note_id> -y               # Skip confirmation
 
 # ─── Notifications ────────────────────────────────
@@ -101,7 +102,10 @@ xiaohongshu-cli uses a 2-tier authentication strategy:
 1. **Saved cookies** — loads from `~/.xiaohongshu-cli/cookies.json`
 2. **Browser cookies** — auto-extracts from Chrome, Firefox, Safari, Edge, Brave
 
-Cookies are validated on use. Most commands require authentication. Use `--cookie-source` to specify browser (default: chrome).
+`xhs login` always refreshes cookies from the selected browser and overwrites the local cache.
+Other authenticated commands automatically retry once with fresh browser cookies when the saved session has expired.
+
+Most commands require authentication. Use `--cookie-source` to specify browser (default: chrome; also supports firefox, edge, safari, brave).
 
 ## Development
 

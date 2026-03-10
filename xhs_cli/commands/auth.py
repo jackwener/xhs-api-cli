@@ -4,16 +4,14 @@ import click
 
 from ..client import XhsClient
 from ..cookies import clear_cookies, get_cookies
-from ..exceptions import NoCookieError, XhsApiError
 from ..formatter import (
     console,
-    error_payload,
     maybe_print_structured,
-    print_error,
     print_success,
-    render_user_info,
     success_payload,
+    render_user_info,
 )
+from ._common import exit_for_error, run_client_action
 
 
 def _xhs_user_payload(info: dict) -> dict[str, object]:
@@ -37,24 +35,21 @@ def login(ctx, as_json: bool, as_yaml: bool):
     """Log in by extracting cookies from browser."""
     cookie_source = ctx.obj.get("cookie_source", "chrome") if ctx.obj else "chrome"
     try:
-        cookies = get_cookies(cookie_source)
+        cookies = get_cookies(cookie_source, force_refresh=True)
         print_success(f"Cookies extracted from {cookie_source}")
 
         # Verify by fetching user info
         with XhsClient(cookies) as client:
             info = client.get_self_info()
 
-        if not maybe_print_structured(info, as_json=as_json, as_yaml=as_yaml):
+        payload = success_payload({"authenticated": True, "user": _xhs_user_payload(info)})
+        if not maybe_print_structured(payload, as_json=as_json, as_yaml=as_yaml):
             nickname = info.get("nickname", "Unknown")
             red_id = info.get("red_id", "")
             print_success(f"Logged in as: {nickname} (ID: {red_id})")
 
-    except NoCookieError as e:
-        print_error(str(e))
-        raise SystemExit(1) from None
-    except XhsApiError as e:
-        print_error(f"Login verification failed: {e}")
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml, prefix="Login verification failed")
 
 
 @click.command()
@@ -63,11 +58,8 @@ def login(ctx, as_json: bool, as_yaml: bool):
 @click.pass_context
 def status(ctx, as_json: bool, as_yaml: bool):
     """Check current login status and user info."""
-    cookie_source = ctx.obj.get("cookie_source", "chrome") if ctx.obj else "chrome"
     try:
-        cookies = get_cookies(cookie_source)
-        with XhsClient(cookies) as client:
-            info = client.get_self_info()
+        info = run_client_action(ctx, lambda client: client.get_self_info())
 
         if not maybe_print_structured(
             success_payload({"authenticated": True, "user": _xhs_user_payload(info)}),
@@ -88,31 +80,19 @@ def status(ctx, as_json: bool, as_yaml: bool):
             if desc:
                 console.print(f"  简介: {desc}")
 
-    except NoCookieError:
-        if maybe_print_structured(
-            error_payload("not_authenticated", "Not logged in. Run: xhs login"),
-            as_json=as_json,
-            as_yaml=as_yaml,
-        ):
-            raise SystemExit(1) from None
-        print_error("Not logged in. Run: xhs login")
-        raise SystemExit(1) from None
-    except XhsApiError as e:
-        if maybe_print_structured(
-            error_payload("api_error", f"Status check failed: {e}"),
-            as_json=as_json,
-            as_yaml=as_yaml,
-        ):
-            raise SystemExit(1) from None
-        print_error(f"Status check failed: {e}")
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml, prefix="Status check failed")
 
 
 @click.command()
-def logout():
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--yaml", "as_yaml", is_flag=True, help="Output as YAML")
+def logout(as_json: bool, as_yaml: bool):
     """Clear saved cookies and log out."""
     clear_cookies()
-    print_success("Logged out — cookies cleared")
+    payload = success_payload({"logged_out": True})
+    if not maybe_print_structured(payload, as_json=as_json, as_yaml=as_yaml):
+        print_success("Logged out — cookies cleared")
 
 
 @click.command()
@@ -121,11 +101,8 @@ def logout():
 @click.pass_context
 def whoami(ctx, as_json: bool, as_yaml: bool):
     """Show detailed profile of current user (level, fans, likes)."""
-    cookie_source = ctx.obj.get("cookie_source", "chrome") if ctx.obj else "chrome"
     try:
-        cookies = get_cookies(cookie_source)
-        with XhsClient(cookies) as client:
-            info = client.get_self_info()
+        info = run_client_action(ctx, lambda client: client.get_self_info())
 
         if not maybe_print_structured(
             success_payload({"user": _xhs_user_payload(info)}),
@@ -134,21 +111,5 @@ def whoami(ctx, as_json: bool, as_yaml: bool):
         ):
             render_user_info(info)
 
-    except NoCookieError:
-        if maybe_print_structured(
-            error_payload("not_authenticated", "Not logged in. Run: xhs login"),
-            as_json=as_json,
-            as_yaml=as_yaml,
-        ):
-            raise SystemExit(1) from None
-        print_error("Not logged in. Run: xhs login")
-        raise SystemExit(1) from None
-    except XhsApiError as e:
-        if maybe_print_structured(
-            error_payload("api_error", f"Failed to get profile: {e}"),
-            as_json=as_json,
-            as_yaml=as_yaml,
-        ):
-            raise SystemExit(1) from None
-        print_error(f"Failed to get profile: {e}")
-        raise SystemExit(1) from None
+    except Exception as exc:
+        exit_for_error(exc, as_json=as_json, as_yaml=as_yaml, prefix="Failed to get profile")

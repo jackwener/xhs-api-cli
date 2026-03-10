@@ -4,7 +4,7 @@ import yaml
 from click.testing import CliRunner
 
 from xhs_cli.cli import cli
-from xhs_cli.exceptions import NoCookieError
+from xhs_cli.exceptions import NoCookieError, SessionExpiredError, UnsupportedOperationError
 
 runner = CliRunner()
 
@@ -79,22 +79,10 @@ class TestCliBasic:
 
     def test_status_auto_yaml_when_stdout_is_not_tty(self, monkeypatch):
         monkeypatch.setenv("OUTPUT", "auto")
-
-        class FakeClient:
-            def __init__(self, cookies):
-                self.cookies = cookies
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc, tb):
-                return False
-
-            def get_self_info(self):
-                return {"nickname": "Alice", "red_id": "alice001"}
-
-        monkeypatch.setattr("xhs_cli.commands.auth.get_cookies", lambda source: {"a1": "cookie"})
-        monkeypatch.setattr("xhs_cli.commands.auth.XhsClient", FakeClient)
+        monkeypatch.setattr(
+            "xhs_cli.commands.auth.run_client_action",
+            lambda ctx, action: {"nickname": "Alice", "red_id": "alice001"},
+        )
 
         result = runner.invoke(cli, ["status"])
 
@@ -107,22 +95,10 @@ class TestCliBasic:
 
     def test_whoami_auto_yaml_when_stdout_is_not_tty(self, monkeypatch):
         monkeypatch.setenv("OUTPUT", "auto")
-
-        class FakeClient:
-            def __init__(self, cookies):
-                self.cookies = cookies
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc, tb):
-                return False
-
-            def get_self_info(self):
-                return {"nickname": "Alice", "red_id": "alice001", "user_id": "u-1"}
-
-        monkeypatch.setattr("xhs_cli.commands.auth.get_cookies", lambda source: {"a1": "cookie"})
-        monkeypatch.setattr("xhs_cli.commands.auth.XhsClient", FakeClient)
+        monkeypatch.setattr(
+            "xhs_cli.commands.auth.run_client_action",
+            lambda ctx, action: {"nickname": "Alice", "red_id": "alice001", "user_id": "u-1"},
+        )
 
         result = runner.invoke(cli, ["whoami"])
 
@@ -134,8 +110,8 @@ class TestCliBasic:
     def test_read_error_yaml_when_not_logged_in(self, monkeypatch):
         monkeypatch.setenv("OUTPUT", "auto")
         monkeypatch.setattr(
-            "xhs_cli.commands.reading._get_client",
-            lambda ctx: (_ for _ in ()).throw(NoCookieError("need login")),
+            "xhs_cli.commands._common.get_cookies",
+            lambda source, force_refresh=False: (_ for _ in ()).throw(NoCookieError(source)),
         )
 
         result = runner.invoke(cli, ["read", "abc", "--yaml"])
@@ -143,4 +119,49 @@ class TestCliBasic:
         assert result.exit_code != 0
         payload = yaml.safe_load(result.output)
         assert payload["ok"] is False
-        assert payload["error"]["code"] == "api_error"
+        assert payload["error"]["code"] == "not_authenticated"
+
+    def test_status_reports_not_authenticated_when_session_expired(self, monkeypatch):
+        monkeypatch.setenv("OUTPUT", "auto")
+
+        def fake_run_client_action(ctx, action):
+            raise SessionExpiredError()
+
+        monkeypatch.setattr("xhs_cli.commands.auth.run_client_action", fake_run_client_action)
+
+        result = runner.invoke(cli, ["status", "--yaml"])
+
+        assert result.exit_code != 0
+        payload = yaml.safe_load(result.output)
+        assert payload["ok"] is False
+        assert payload["error"]["code"] == "not_authenticated"
+
+    def test_logout_supports_structured_output(self):
+        from xhs_cli.commands import auth
+
+        original_clear_cookies = auth.clear_cookies
+        auth.clear_cookies = lambda: None
+        try:
+            result = runner.invoke(cli, ["logout", "--yaml"])
+        finally:
+            auth.clear_cookies = original_clear_cookies
+
+        assert result.exit_code == 0
+        payload = yaml.safe_load(result.output)
+        assert payload["ok"] is True
+        assert payload["data"]["logged_out"] is True
+
+    def test_delete_reports_unsupported_operation(self, monkeypatch):
+        monkeypatch.setattr(
+            "xhs_cli.commands.creator.run_client_action",
+            lambda ctx, action: (_ for _ in ()).throw(
+                UnsupportedOperationError("Delete note is currently unavailable from the public web API.")
+            ),
+        )
+
+        result = runner.invoke(cli, ["delete", "note-123", "--yes", "--yaml"])
+
+        assert result.exit_code != 0
+        payload = yaml.safe_load(result.output)
+        assert payload["ok"] is False
+        assert payload["error"]["code"] == "unsupported_operation"

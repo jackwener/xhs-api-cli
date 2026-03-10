@@ -40,6 +40,13 @@ class SignatureError(XhsApiError):
         super().__init__("Signature verification failed", code=300015)
 
 
+class UnsupportedOperationError(XhsApiError):
+    """Raised when the current web API no longer supports an exposed CLI action."""
+
+    def __init__(self, message: str):
+        super().__init__(message, code="unsupported_operation")
+
+
 class NoCookieError(XhsApiError):
     """Raised when no valid cookies are found."""
 

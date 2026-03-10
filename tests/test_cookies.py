@@ -6,6 +6,7 @@ import pytest
 from xhs_cli.cookies import (
     clear_cookies,
     cookies_to_string,
+    get_cookies,
     load_saved_cookies,
     save_cookies,
 )
@@ -68,3 +69,20 @@ class TestCookiesToString:
         assert "a1=v1" in result
         assert "web_session=v2" in result
         assert "; " in result
+
+
+class TestGetCookies:
+    def test_prefers_saved_cookies_by_default(self, monkeypatch):
+        monkeypatch.setattr("xhs_cli.cookies.load_saved_cookies", lambda: {"a1": "saved"})
+        monkeypatch.setattr("xhs_cli.cookies.extract_browser_cookies", lambda source: {"a1": "fresh"})
+
+        assert get_cookies("chrome") == {"a1": "saved"}
+
+    def test_force_refresh_bypasses_saved_cookies(self, monkeypatch):
+        monkeypatch.setattr("xhs_cli.cookies.load_saved_cookies", lambda: {"a1": "saved"})
+        monkeypatch.setattr("xhs_cli.cookies.extract_browser_cookies", lambda source: {"a1": "fresh"})
+        saved = []
+        monkeypatch.setattr("xhs_cli.cookies.save_cookies", lambda cookies: saved.append(cookies))
+
+        assert get_cookies("chrome", force_refresh=True) == {"a1": "fresh"}
+        assert saved == [{"a1": "fresh"}]

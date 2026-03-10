@@ -1,0 +1,127 @@
+name: Publish to ClawHub
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLAWHUB_SLUG: xiaohongshu-cli
+      CLAWHUB_NAME: xiaohongshu-cli
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ClawHub CLI
+        run: npm install -g clawhub@0.7.0
+
+      - name: Publish to ClawHub
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        run: |
+          if [ -z "${CLAWHUB_TOKEN:-}" ]; then
+            echo "Missing required secret: CLAWHUB_TOKEN"
+            exit 1
+          fi
+
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ] && [ -n "${GITHUB_REF_NAME:-}" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(sed -n 's/^version = \"\([^\"]*\)\"/\1/p' pyproject.toml | head -n 1)"
+          fi
+          if [ -z "${VERSION:-}" ]; then
+            echo "Unable to resolve version"
+            exit 1
+          fi
+          echo "Publishing ${CLAWHUB_SLUG}@${VERSION}"
+
+          if clawhub --no-input inspect "${CLAWHUB_SLUG}" --version "${VERSION}" >/dev/null 2>&1; then
+            echo "Version ${VERSION} already exists on ClawHub, skipping publish."
+            exit 0
+          fi
+
+          clawhub --no-input login --token "${CLAWHUB_TOKEN}" --no-browser
+          export VERSION
+
+          # Workaround: clawhub@0.7.0 publish doesn't send acceptLicenseTerms,
+          # which the server now requires. Use a Node.js script to publish with
+          # the corrected payload.
+          # Note: NODE_TLS_REJECT_UNAUTHORIZED=0 is needed because api.clawhub.io
+          # has an expired SSL certificate. Remove once ClawHub renews their cert.
+          NODE_TLS_REJECT_UNAUTHORIZED=0 node - <<'PUBLISH_SCRIPT'
+          const { resolve } = require("path");
+          const { readFileSync, statSync, readdirSync } = require("fs");
+          const folder = resolve(".");
+          const slug = process.env.CLAWHUB_SLUG;
+          const version = process.env.VERSION;
+
+          // Collect text files (same logic as clawhub CLI)
+          function walk(dir, base = "") {
+            let files = [];
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+              const rel = base ? base + "/" + entry.name : entry.name;
+              if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+              if (entry.isDirectory()) { files.push(...walk(dir + "/" + entry.name, rel)); }
+              else { files.push({ rel, abs: dir + "/" + entry.name }); }
+            }
+            return files;
+          }
+          const files = walk(folder).filter(f => {
+            const ext = f.rel.split(".").pop().toLowerCase();
+            return ["md","txt","py","toml","yml","yaml","json","cfg","ini","sh","bat"].includes(ext);
+          });
+
+          const payload = JSON.stringify({
+            slug,
+            displayName: slug,
+            version,
+            changelog: "Release " + version,
+            tags: ["latest"],
+            acceptLicenseTerms: true,
+          });
+
+          const form = new FormData();
+          form.set("payload", payload);
+          for (const file of files) {
+            const bytes = readFileSync(file.abs);
+            const blob = new Blob([bytes], { type: "text/plain" });
+            form.append("files", blob, file.rel);
+          }
+
+          // Read registry and token from clawhub config
+          const os = require("os");
+          const configPath = resolve(os.homedir(), ".config", "clawhub", "config.json");
+          let token = "";
+          try {
+            const cfg = JSON.parse(readFileSync(configPath, "utf8"));
+            token = cfg.token || "";
+          } catch {}
+          if (!token) { console.error("No token found"); process.exit(1); }
+
+          const registry = "https://clawhub.ai";
+          fetch(registry + "/api/v1/skills", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+            body: form,
+          }).then(async (r) => {
+            const text = await r.text();
+            if (!r.ok) {
+              console.error("Publish failed:", r.status, text);
+              process.exit(1);
+            }
+            console.log("✔ Published", slug + "@" + version);
+          }).catch((e) => {
+            console.error(e);
+            process.exit(1);
+          });
+          PUBLISH_SCRIPT
