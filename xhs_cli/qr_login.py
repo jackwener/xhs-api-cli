@@ -36,6 +36,29 @@ POLL_TIMEOUT_S = 240  # 4 minutes
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
+def _apply_session_cookies(client: XhsClient, payload: dict[str, str]) -> None:
+    """Persist any session cookies returned by the QR login endpoints."""
+    session = payload.get("session", "")
+    secure_session = payload.get("secure_session", "")
+    if session:
+        client.cookies["web_session"] = session
+    if secure_session:
+        client.cookies["web_session_sec"] = secure_session
+
+
+def _build_saved_cookies(a1: str, webid: str, payload: dict[str, str]) -> dict[str, str]:
+    """Build the cookie payload persisted after QR login succeeds."""
+    cookies = {
+        "a1": a1,
+        "webId": webid,
+    }
+    if payload.get("session"):
+        cookies["web_session"] = payload["session"]
+    if payload.get("secure_session"):
+        cookies["web_session_sec"] = payload["secure_session"]
+    return cookies
+
 def _generate_a1() -> str:
     """Generate a fresh a1 cookie value (52 hex chars with embedded timestamp)."""
     prefix = "".join(random.choices("0123456789abcdef", k=24))
@@ -132,6 +155,7 @@ def qrcode_login(
         # 2. Activate guest session (this gives us an initial web_session)
         try:
             activate_data = client.login_activate()
+            _apply_session_cookies(client, activate_data)
             guest_session = activate_data.get("session", "")
             logger.debug(
                 "Initial activate: session=%s user_id=%s",
@@ -184,6 +208,7 @@ def qrcode_login(
                 # 6. Activate again — now we get the REAL session
                 try:
                     activate_data = client.login_activate()
+                    _apply_session_cookies(client, activate_data)
                     session = activate_data.get("session", "")
                     user_id = activate_data.get("user_id", "")
                     logger.debug(
@@ -200,12 +225,15 @@ def qrcode_login(
                         "Please try: xhs login (browser cookie extraction)"
                     )
 
+                confirmed_user_id = status_data.get("userId", "")
+                if confirmed_user_id and user_id and confirmed_user_id != user_id:
+                    raise XhsApiError(
+                        "QR login confirmed for a different user than the saved session. "
+                        "Please retry the QR login flow."
+                    )
+
                 # 7. Save cookies
-                cookies = {
-                    "a1": a1,
-                    "webId": webid,
-                    "web_session": session,
-                }
+                cookies = _build_saved_cookies(a1, webid, activate_data)
                 save_cookies(cookies)
                 _print(f"👤 User ID: {user_id}")
 
