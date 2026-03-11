@@ -73,9 +73,6 @@ def read(ctx, id_or_url: str, xsec_token: str, as_json: bool, as_yaml: bool):
     # --xsec-token flag overrides; otherwise use token from URL
     token = xsec_token or url_token
 
-    if not token and not as_json and not as_yaml:
-        print_info("No xsec_token — using HTML fallback (pass full URL for best results)")
-
     try:
         data = run_client_action(ctx, lambda client: client.get_note_by_id(note_id, xsec_token=token))
 

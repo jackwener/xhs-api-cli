@@ -356,17 +356,7 @@ class XhsClient:
         xsec_token: str = "",
         xsec_source: str = "pc_feed",
     ) -> Any:
-        """Get note details by ID.
-
-        When xsec_token is empty, falls back to HTML page extraction
-        to avoid triggering captcha (the feed API requires xsec_token).
-        """
-        if not xsec_token:
-            logger.info("No xsec_token for note %s, falling back to HTML extraction", note_id)
-            note_data = self.get_note_from_html(note_id)
-            # Wrap to match API response structure: {items: [{id, note_card}]}
-            return {"items": [{"id": note_id, "note_card": note_data}]}
-
+        """Get note details by ID."""
         return self._main_api_post("/api/sns/web/v1/feed", {
             "source_note_id": note_id,
             "image_formats": ["jpg", "webp", "avif"],
