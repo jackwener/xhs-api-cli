@@ -2,7 +2,7 @@
 name: xiaohongshu-cli
 description: Use xiaohongshu-cli for ALL Xiaohongshu (Little Red Book, 小红书) operations — searching notes, reading content, browsing users, liking, collecting, commenting, following, and posting. Invoke whenever the user requests any Xiaohongshu interaction.
 author: jackwener
-version: "0.3.0"
+version: "0.4.0"
 tags:
   - xiaohongshu
   - xhs
@@ -85,7 +85,7 @@ Payloads live under `.data`.
 | Command | Description | Example |
 |---------|-------------|---------|
 | `xhs search <keyword>` | Search notes | `xhs search "美食" --sort popular --type video` |
-| `xhs read <id_or_url>` | Read a note (URL auto-extracts xsec_token) | `xhs read "https://...?xsec_token=xxx"` |
+| `xhs read <id_or_url>` | Read a note (URL auto-extracts xsec_token; pure ID uses HTML fallback) | `xhs read "https://...?xsec_token=xxx"` |
 | `xhs comments <id_or_url>` | Get comments (xsec_token required — paste URL) | `xhs comments "https://...?xsec_token=..."` |
 | `xhs comments <id_or_url> --all` | Get ALL comments (auto-paginate) | `xhs comments "<url>" --all --json` |
 | `xhs sub-comments <note_id> <comment_id>` | Get replies to comment | `xhs sub-comments abc 123` |

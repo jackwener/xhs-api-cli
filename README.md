@@ -78,8 +78,8 @@ xhs search-user "用户名"               # Search users
 xhs topics "美食"                      # Search hashtags/topics
 
 # ─── Reading ──────────────────────────────────────
-xhs read <note_id>                     # Read a note
-xhs read "https://www.xiaohongshu.com/explore/xxx?xsec_token=yyy"  # Read by URL (auto-extracts xsec_token)
+xhs read <note_id>                     # Read a note (auto HTML fallback if no token)
+xhs read "https://www.xiaohongshu.com/explore/xxx?xsec_token=yyy"  # Read by URL (best — auto-extracts xsec_token)
 xhs comments "<url>"                   # View comments — paste URL to auto-extract xsec_token
 xhs comments "<url>" --all             # Fetch ALL comments (auto-paginate all pages)
 xhs comments "<url>" --all --json      # All comments as JSON
@@ -157,7 +157,7 @@ xiaohongshu-cli includes comprehensive anti-risk-control measures designed to mi
 - **Auto-retry**: Exponential backoff on HTTP 429/5xx and network errors (up to 3 retries)
 
 ### Browser Fingerprint Consistency
-- **UA/Platform alignment**: User-Agent, `sec-ch-ua`, `sec-ch-ua-platform`, and fingerprint fields are all consistent (macOS Chrome)
+- **UA/Platform alignment**: User-Agent, `sec-ch-ua`, `sec-ch-ua-platform`, and fingerprint fields are all consistent (macOS Chrome 145)
 - **Session-stable identity**: GPU, screen resolution, CPU cores, and other hardware fingerprint values are generated once per session and reused across all requests (real browsers don't change hardware mid-session)
 - **macOS-native values**: GPU vendors (Apple M1/M2/M3, Intel Iris), Retina screen resolutions, `MacIntel` platform — all matching a real macOS browser
 
@@ -340,8 +340,8 @@ xhs search-user "用户名"               # 搜索用户
 xhs topics "美食"                      # 搜索话题
 
 # 阅读
-xhs read <note_id>                     # 阅读笔记
-xhs read "https://...?xsec_token=..."  # 粘贴网页 URL 直接阅读（自动提取 token）
+xhs read <note_id>                     # 阅读笔记（无 token 时自动 HTML fallback）
+xhs read "https://...?xsec_token=..."  # 粘贴网页 URL 直接阅读（推荐，自动提取 token）
 xhs comments "<url>"                   # 查看评论 — 粘贴 URL 自动提取 xsec_token
 xhs comments "<url>" --all             # 获取全部评论（自动翻页）
 xhs comments "<url>" --all --json      # 全部评论，JSON 格式
