@@ -14,7 +14,11 @@ class NeedVerifyError(XhsApiError):
     """Raised when XHS requires captcha verification."""
 
     def __init__(self, verify_type: str, verify_uuid: str):
-        super().__init__(f"Captcha required: type={verify_type}, uuid={verify_uuid}")
+        super().__init__(
+            f"Captcha required (type={verify_type}). "
+            "This is usually temporary — wait a few minutes and try again, "
+            "or open xiaohongshu.com in your browser to complete the captcha."
+        )
         self.verify_type = verify_type
         self.verify_uuid = verify_uuid
 

@@ -188,17 +188,26 @@ class XhsClient(
             raise XhsApiError(f"Request failed after {self._max_retries} retries: {last_exc}") from last_exc
         raise XhsApiError(f"Request failed after {self._max_retries} retries: HTTP {resp.status_code}")
 
+    _MAX_CAPTCHA_RETRIES = 2
+
     def _main_api_get(
         self,
         uri: str,
         params: dict[str, str | int | list[str]] | None = None,
     ) -> Any:
-        sign_headers = sign_main_api("GET", uri, self.cookies, params=params)
         full_uri = build_get_uri(uri, params)
         url = f"{EDITH_HOST}{full_uri}"
-        logger.debug("GET %s", url)
-        resp = self._request_with_retry("GET", url, headers={**self._base_headers(), **sign_headers})
-        return self._handle_response(resp)
+
+        for attempt in range(1 + self._MAX_CAPTCHA_RETRIES):
+            sign_headers = sign_main_api("GET", uri, self.cookies, params=params)
+            logger.debug("GET %s (captcha attempt %d)", url, attempt + 1)
+            resp = self._request_with_retry("GET", url, headers={**self._base_headers(), **sign_headers})
+            try:
+                return self._handle_response(resp)
+            except NeedVerifyError:
+                if attempt >= self._MAX_CAPTCHA_RETRIES:
+                    raise
+                logger.info("Retrying GET %s with fresh signature after captcha cooldown", uri)
 
     def _main_api_post(
         self,
@@ -206,14 +215,22 @@ class XhsClient(
         data: dict[str, Any],
         header_overrides: dict[str, str] | None = None,
     ) -> Any:
-        sign_headers = sign_main_api("POST", uri, self.cookies, payload=data)
         url = f"{EDITH_HOST}{uri}"
-        headers = {**self._base_headers(), **sign_headers}
-        if header_overrides:
-            headers.update(header_overrides)
-        logger.debug("POST %s", url)
-        resp = self._request_with_retry("POST", url, headers=headers, content=json.dumps(data, separators=(",", ":")))
-        return self._handle_response(resp)
+        body = json.dumps(data, separators=(",", ":"))
+
+        for attempt in range(1 + self._MAX_CAPTCHA_RETRIES):
+            sign_headers = sign_main_api("POST", uri, self.cookies, payload=data)
+            headers = {**self._base_headers(), **sign_headers}
+            if header_overrides:
+                headers.update(header_overrides)
+            logger.debug("POST %s (captcha attempt %d)", url, attempt + 1)
+            resp = self._request_with_retry("POST", url, headers=headers, content=body)
+            try:
+                return self._handle_response(resp)
+            except NeedVerifyError:
+                if attempt >= self._MAX_CAPTCHA_RETRIES:
+                    raise
+                logger.info("Retrying POST %s with fresh signature after captcha cooldown", uri)
 
     def _creator_host(self, uri: str) -> str:
         return CREATOR_HOST if uri.startswith("/api/galaxy/") else EDITH_HOST
