@@ -386,7 +386,7 @@ class CreatorEndpointsMixin:
                 "note_id": "",
                 "desc": desc,
                 "source": '{"type":"web","ids":"","extraInfo":"{\\"subType\\":\\"official\\"}"}',
-                "business_binds": json.dumps(business_binds),
+                "business_binds": json.dumps(business_binds, ensure_ascii=False),
                 "ats": [],
                 "hash_tag": topics or [],
                 "post_loc": {},
@@ -395,10 +395,7 @@ class CreatorEndpointsMixin:
             "image_info": {"images": images},
             "video_info": None,
         }
-        return self._main_api_post("/web_api/sns/v2/note", data, {
-            "origin": CREATOR_HOST,
-            "referer": f"{CREATOR_HOST}/",
-        })
+        return self._creator_post("/web_api/sns/v2/note", data)
 
     def create_video_note(
         self,
@@ -436,7 +433,7 @@ class CreatorEndpointsMixin:
                 "note_id": "",
                 "desc": desc,
                 "source": '{"type":"web","ids":"","extraInfo":"{\\"subType\\":\\"official\\"}"}',
-                "business_binds": json.dumps(business_binds, ensure_ascii=True),
+                "business_binds": json.dumps(business_binds, ensure_ascii=False),
                 "ats": [],
                 "hash_tag": topics or [],
                 "post_loc": {},
@@ -446,10 +443,7 @@ class CreatorEndpointsMixin:
             "video_info": video_info,
         }
         
-        return self._main_api_post("/web_api/sns/v2/note", data, {
-            "origin": CREATOR_HOST,
-            "referer": f"{CREATOR_HOST}/",
-        })
+        return self._creator_post("/web_api/sns/v2/note", data)
 
     def delete_note(self, note_id: str) -> dict[str, Any]:
         try:
