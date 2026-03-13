@@ -13,10 +13,13 @@ from xhs_cli.cookies import (
     get_cached_note_context,
     get_cached_xsec_token,
     get_cookies,
+    get_index_cache_path,
+    get_note_by_index,
     get_token_cache_path,
     load_saved_cookies,
     load_token_cache,
     save_cookies,
+    save_note_index,
 )
 
 
@@ -132,3 +135,48 @@ class TestNoteContextCache:
         )
 
         assert get_cached_note_context("note-1") == {}
+
+
+class TestNoteIndexCache:
+    def test_save_and_resolve_index_with_source(self, tmp_config_dir):
+        save_note_index([
+            {
+                "note_id": "note-1",
+                "xsec_token": "token-1",
+                "xsec_source": "pc_search",
+            }
+        ])
+
+        assert get_note_by_index(1) == {
+            "note_id": "note-1",
+            "xsec_token": "token-1",
+            "xsec_source": "pc_search",
+        }
+
+    def test_save_empty_index_clears_previous_entries(self, tmp_config_dir):
+        save_note_index([
+            {
+                "note_id": "note-1",
+                "xsec_token": "token-1",
+                "xsec_source": "pc_search",
+            }
+        ])
+        save_note_index([])
+
+        assert get_note_by_index(1) is None
+        assert get_index_cache_path().read_text() == "[]"
+
+    def test_index_file_permissions(self, tmp_config_dir):
+        save_note_index([{"note_id": "note-1", "xsec_token": "", "xsec_source": ""}])
+
+        stat = get_index_cache_path().stat()
+        assert stat.st_mode & 0o777 == 0o600
+
+    def test_index_normalizes_missing_optional_fields(self, tmp_config_dir):
+        get_index_cache_path().write_text('[{"note_id":"note-1"}]')
+
+        assert get_note_by_index(1) == {
+            "note_id": "note-1",
+            "xsec_token": "",
+            "xsec_source": "",
+        }

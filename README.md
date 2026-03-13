@@ -20,6 +20,7 @@ A CLI for Xiaohongshu (小红书) — search, read, interact, and post via rever
 - 🔐 **Auth** — auto-extract browser cookies, QR code login, status check, whoami
 - 🔍 **Search** — notes by keyword, user search, topic search
 - 📖 **Reading** — note detail, comments, sub-comments, user profiles
+- 🔢 **Short-index navigation** — open recent list results with `xhs read 1` or `xhs comments 1`
 - 📰 **Feed** — recommendation feed, hot/trending by category
 - 👥 **Social** — follow/unfollow, favorites
 - 👍 **Interactions** — like, favorite, comment, reply, delete
@@ -78,8 +79,10 @@ xhs search-user "用户名"               # Search users
 xhs topics "美食"                      # Search hashtags/topics
 
 # ─── Reading ──────────────────────────────────────
+xhs read 1                             # Read the 1st result from the last list command
 xhs read <note_id>                     # Read a note (API only)
 xhs read "https://www.xiaohongshu.com/explore/xxx?xsec_token=yyy"  # Read by URL (uses URL token)
+xhs comments 1                         # Read comments for the 1st result from the last list command
 xhs comments "<url>"                   # View comments — paste URL to cache/reuse xsec_token
 xhs comments "<url>" --all             # Fetch ALL comments (auto-paginate all pages)
 xhs comments "<url>" --all --json      # All comments as JSON
@@ -96,6 +99,11 @@ xhs hot                               # Hot notes (default: food)
 xhs hot -c fashion                    # Categories: fashion, food, cosmetics,
                                       #   movie, career, love, home, gaming,
                                       #   travel, fitness
+
+# Short index works after list commands such as search/feed/hot/user-posts
+xhs search "黑丝"
+xhs read 1
+xhs comments 1
 
 # ─── Social ───────────────────────────────────────
 xhs favorites                          # My bookmarked notes (current user)
@@ -142,6 +150,14 @@ Other authenticated commands automatically retry once with fresh browser cookies
 ### Cookie TTL
 
 Saved cookies are valid for **7 days** by default. After that, the client automatically attempts to refresh from the browser. If browser extraction fails, the existing cookies are used with a warning.
+
+### Short-Index Navigation
+
+After any listing command such as `search`, `feed`, `hot`, or `user-posts`, the CLI stores the latest ordered note list in `~/.xiaohongshu-cli/index_cache.json`.
+
+- `xhs read <N>` opens the Nth note from the latest listing
+- `xhs comments <N>` opens comments for the Nth note from the latest listing
+- Empty listings clear the index cache, so old results are not reused by accident
 
 ## Environment Variables
 

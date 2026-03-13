@@ -197,3 +197,16 @@ class TestReadOnly:
         reread_result, reread_payload = _invoke("read", search_note_id)
         assert reread_result.exit_code == 0, f"final reread failed: {reread_result.output}"
         assert reread_payload["ok"] is True
+
+    def test_short_index_search_read_comments_roundtrip(self):
+        search_result, search_payload = _invoke("search", "黑丝")
+        assert search_result.exit_code == 0, f"search 黑丝 failed: {search_result.output}"
+        assert search_payload["ok"] is True
+
+        read_result, read_payload = _invoke("read", "1")
+        assert read_result.exit_code == 0, f"read by short index failed: {read_result.output}"
+        assert read_payload["ok"] is True
+
+        comments_result, comments_payload = _invoke("comments", "1")
+        assert comments_result.exit_code == 0, f"comments by short index failed: {comments_result.output}"
+        assert comments_payload["ok"] is True

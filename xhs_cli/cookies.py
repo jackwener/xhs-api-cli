@@ -13,7 +13,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
-from .constants import CONFIG_DIR_NAME, COOKIE_FILE, TOKEN_CACHE_FILE
+from .constants import CONFIG_DIR_NAME, COOKIE_FILE, INDEX_CACHE_FILE, TOKEN_CACHE_FILE
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,11 @@ def get_cookie_path() -> Path:
 def get_token_cache_path() -> Path:
     """Get xsec token cache file path."""
     return get_config_dir() / TOKEN_CACHE_FILE
+
+
+def get_index_cache_path() -> Path:
+    """Get note index cache file path."""
+    return get_config_dir() / INDEX_CACHE_FILE
 
 
 def load_saved_cookies() -> dict[str, str] | None:
@@ -238,6 +243,54 @@ def invalidate_note_context(note_id: str) -> None:
     del cache[note_id]
     save_token_cache(cache)
     logger.debug("Invalidated cached note context for %s", note_id)
+
+
+def _normalize_index_entry(value: Any) -> dict[str, str] | None:
+    if not isinstance(value, dict):
+        return None
+
+    note_id = str(value.get("note_id", "")).strip()
+    if not note_id:
+        return None
+
+    return {
+        "note_id": note_id,
+        "xsec_token": str(value.get("xsec_token", "")).strip(),
+        "xsec_source": str(value.get("xsec_source", "")).strip(),
+    }
+
+
+def save_note_index(items: list[dict[str, str]]) -> None:
+    """Persist the latest ordered note index for short-index navigation."""
+    path = get_index_cache_path()
+    normalized = [
+        entry
+        for entry in (_normalize_index_entry(item) for item in items)
+        if entry
+    ]
+    path.write_text(json.dumps(normalized, indent=2, ensure_ascii=False))
+    path.chmod(0o600)
+    logger.debug("Saved note index with %d entries", len(normalized))
+
+
+def get_note_by_index(index: int) -> dict[str, str] | None:
+    """Resolve a 1-based short index to a cached note reference."""
+    if index <= 0:
+        return None
+
+    path = get_index_cache_path()
+    if not path.exists():
+        return None
+
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    if not isinstance(data, list) or index > len(data):
+        return None
+
+    return _normalize_index_entry(data[index - 1])
 
 
 def cache_xsec_token(note_id: str, xsec_token: str) -> None:

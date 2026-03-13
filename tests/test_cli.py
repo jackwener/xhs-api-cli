@@ -8,6 +8,26 @@ from xhs_cli.exceptions import NoCookieError, SessionExpiredError, UnsupportedOp
 
 runner = CliRunner()
 
+FAKE_NOTE_RESPONSE = {
+    "items": [
+        {
+            "note_card": {
+                "title": "Test Note",
+                "desc": "body",
+                "user": {"nickname": "Author"},
+                "interact_info": {
+                    "liked_count": "100",
+                    "collected_count": "50",
+                    "comment_count": "10",
+                    "share_count": "5",
+                },
+                "tag_list": [],
+                "image_list": [],
+            }
+        }
+    ]
+}
+
 
 class TestCliBasic:
     """Test CLI basics without requiring cookies."""
@@ -239,3 +259,123 @@ class TestCliBasic:
         assert result.exit_code == 0
         assert "explore/69ad061d" in result.output
         assert "another-very-long-token" not in result.output
+
+    def test_read_help_mentions_short_index(self):
+        result = runner.invoke(cli, ["read", "--help"])
+        assert result.exit_code == 0
+        assert "index" in result.output.lower()
+
+    def test_comments_help_mentions_short_index(self):
+        result = runner.invoke(cli, ["comments", "--help"])
+        assert result.exit_code == 0
+        assert "index" in result.output.lower()
+
+    def test_read_index_resolves_note_context(self, monkeypatch):
+        monkeypatch.setattr(
+            "xhs_cli.commands.reading.get_note_by_index",
+            lambda idx: {
+                "note_id": "note-abc",
+                "xsec_token": "token-abc",
+                "xsec_source": "pc_search",
+            } if idx == 1 else None,
+        )
+
+        called = {}
+
+        class FakeClient:
+            def get_note_detail(self, note_id, **kwargs):
+                called["note_id"] = note_id
+                called["kwargs"] = kwargs
+                return FAKE_NOTE_RESPONSE
+
+        def fake_handle_command(ctx, action, render, as_json, as_yaml):
+            action(FakeClient())
+            return None
+
+        monkeypatch.setattr("xhs_cli.commands.reading.handle_command", fake_handle_command)
+
+        result = runner.invoke(cli, ["read", "1"])
+
+        assert result.exit_code == 0
+        assert called["note_id"] == "note-abc"
+        assert called["kwargs"]["xsec_token"] == "token-abc"
+        assert called["kwargs"]["xsec_source"] == "pc_search"
+
+    def test_comments_index_resolves_note_context(self, monkeypatch):
+        monkeypatch.setattr(
+            "xhs_cli.commands.reading.get_note_by_index",
+            lambda idx: {
+                "note_id": "note-abc",
+                "xsec_token": "token-abc",
+                "xsec_source": "pc_search",
+            } if idx == 1 else None,
+        )
+
+        called = {}
+
+        class FakeClient:
+            def get_comments(self, note_id, cursor="", **kwargs):
+                called["note_id"] = note_id
+                called["cursor"] = cursor
+                called["kwargs"] = kwargs
+                return {"comments": []}
+
+        def fake_run_client_action(ctx, action):
+            return action(FakeClient())
+
+        monkeypatch.setattr("xhs_cli.commands.reading.run_client_action", fake_run_client_action)
+
+        result = runner.invoke(cli, ["comments", "1", "--yaml"])
+
+        assert result.exit_code == 0
+        assert called["note_id"] == "note-abc"
+        assert called["kwargs"]["xsec_token"] == "token-abc"
+        assert called["kwargs"]["xsec_source"] == "pc_search"
+
+    def test_read_index_not_found_returns_usage_error(self, monkeypatch):
+        monkeypatch.setattr("xhs_cli.commands.reading.get_note_by_index", lambda idx: None)
+
+        result = runner.invoke(cli, ["read", "999"])
+
+        assert result.exit_code != 0
+        assert "999" in result.output
+
+    def test_search_empty_results_clear_previous_index(self, monkeypatch):
+        from xhs_cli.commands.reading import _save_index_from_items
+
+        saved = []
+        monkeypatch.setattr("xhs_cli.commands.reading.save_note_index", lambda items: saved.append(items))
+
+        _save_index_from_items({"items": []}, xsec_source="pc_search")
+
+        assert saved == [[]]
+
+    def test_user_posts_saves_index_entries(self, monkeypatch):
+        saved = []
+        monkeypatch.setattr("xhs_cli.commands.reading.save_note_index", lambda items: saved.append(items))
+
+        def fake_handle_command(ctx, action, render, as_json, as_yaml):
+            class FakeClient:
+                def get_user_notes(self, user_id, cursor=""):
+                    return {
+                        "notes": [
+                            {"note_id": "note-1"},
+                            {"note_id": "note-2", "xsec_token": "ignored"},
+                        ],
+                        "has_more": False,
+                        "cursor": "",
+                    }
+
+            data = action(FakeClient())
+            render(data)
+            return None
+
+        monkeypatch.setattr("xhs_cli.commands.reading.handle_command", fake_handle_command)
+
+        result = runner.invoke(cli, ["user-posts", "user-1"])
+
+        assert result.exit_code == 0
+        assert saved == [[
+            {"note_id": "note-1", "xsec_token": "", "xsec_source": ""},
+            {"note_id": "note-2", "xsec_token": "ignored", "xsec_source": ""},
+        ]]
