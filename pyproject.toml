@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xiaohongshu-cli"
-version = "0.6.2"
+version = "0.6.3"
 description = "A CLI for Xiaohongshu (Red) — search, read, interact via reverse-engineered API"
 readme = "README.md"
 license = "Apache-2.0"
