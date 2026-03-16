@@ -26,11 +26,24 @@ Usage:
 from __future__ import annotations
 
 import logging
+import sys
 
 import click
 
 from . import __version__
 from .commands import auth, creator, interactions, notifications, reading, social
+
+
+def _fix_windows_encoding() -> None:
+    """Force UTF-8 on Windows where the default codepage (936/GBK) garbles output."""
+    if sys.platform != "win32":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
+_fix_windows_encoding()
 
 
 @click.group()
@@ -89,6 +102,7 @@ cli.add_command(interactions.delete_comment)
 cli.add_command(social.follow)
 cli.add_command(social.unfollow)
 cli.add_command(social.favorites)
+cli.add_command(social.likes)
 
 # ─── Creator commands ───────────────────────────────────────────────────────
 

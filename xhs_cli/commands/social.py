@@ -1,4 +1,6 @@
-"""Social commands: follow, unfollow, favorites, following, followers."""
+"""Social commands: follow, unfollow, favorites, likes."""
+
+from typing import Any, Callable
 
 import click
 
@@ -17,6 +19,32 @@ def _resolve_user_id(ctx, user_id: str | None) -> str:
     if not uid:
         raise click.UsageError("Cannot determine current user_id. Please specify user_id explicitly.")
     return uid
+
+
+def _paged_notes_command(
+    ctx,
+    fetcher: Callable[[Any, str, str], dict[str, Any]],
+    user_id: str | None,
+    cursor: str,
+    as_json: bool,
+    as_yaml: bool,
+) -> None:
+    """Shared logic for paged-notes commands (favorites, likes, etc.)."""
+    uid = _resolve_user_id(ctx, user_id)
+
+    def _action(client):
+        data = fetcher(client, uid, cursor)
+        page = normalize_paged_notes(data)
+        save_index_from_notes(page["notes"])
+        return data
+
+    def _render(data):
+        page = normalize_paged_notes(data)
+        render_user_posts(page["notes"])
+        if page["has_more"]:
+            print_info(f"More notes — use --cursor {page['cursor']}")
+
+    handle_command(ctx, action=_action, render=_render, as_json=as_json, as_yaml=as_yaml)
 
 
 @click.command()
@@ -56,24 +84,23 @@ def unfollow(ctx, user_id: str, as_json: bool, as_yaml: bool):
 @click.pass_context
 def favorites(ctx, user_id: str | None, cursor: str, as_json: bool, as_yaml: bool):
     """List favorited (bookmarked) notes. Defaults to current user if user_id is omitted."""
-    uid = _resolve_user_id(ctx, user_id)
-
-    def _favorites_action(client):
-        data = client.get_user_favorites(uid, cursor=cursor)
-        page = normalize_paged_notes(data)
-        save_index_from_notes(page["notes"])
-        return data
-
-    def _render_favorites(data):
-        page = normalize_paged_notes(data)
-        render_user_posts(page["notes"])
-        if page["has_more"]:
-            print_info(f"More notes — use --cursor {page['cursor']}")
-
-    handle_command(
+    _paged_notes_command(
         ctx,
-        action=_favorites_action,
-        render=_render_favorites,
-        as_json=as_json,
-        as_yaml=as_yaml,
+        fetcher=lambda client, uid, cur: client.get_user_favorites(uid, cursor=cur),
+        user_id=user_id, cursor=cursor, as_json=as_json, as_yaml=as_yaml,
     )
+
+
+@click.command()
+@click.argument("user_id", required=False, default=None)
+@click.option("--cursor", default="", help="Pagination cursor")
+@structured_output_options
+@click.pass_context
+def likes(ctx, user_id: str | None, cursor: str, as_json: bool, as_yaml: bool):
+    """List liked notes. Defaults to current user if user_id is omitted."""
+    _paged_notes_command(
+        ctx,
+        fetcher=lambda client, uid, cur: client.get_user_likes(uid, cursor=cur),
+        user_id=user_id, cursor=cursor, as_json=as_json, as_yaml=as_yaml,
+    )
+
