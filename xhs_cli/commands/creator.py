@@ -1,5 +1,7 @@
 """Creator commands: post, my-notes, delete."""
 
+import re
+
 import click
 
 from ..command_normalizers import select_topic_payload
@@ -14,11 +16,20 @@ from ..note_refs import save_index_from_notes
 from ._common import exit_for_error, handle_command, run_client_action, structured_output_options
 
 
+def extract_hashtags(body: str) -> list[str]:
+    """Extract hashtag names from body text.
+
+    Matches '#tag' at start-of-string or preceded by whitespace.
+    Does not match URL fragments like 'https://example.com#section'.
+    """
+    return re.findall(r"(?:^|(?<=\s))#([^\s#]+)", body)
+
+
 @click.command()
 @click.option("--title", required=True, help="Note title")
 @click.option("--body", required=True, help="Note body text")
 @click.option("--images", required=True, multiple=True, help="Image file path(s)")
-@click.option("--topic", default=None, help="Topic/hashtag to search and attach")
+@click.option("--topic", "topics_flag", multiple=True, help="Topic(s)/hashtag(s) to search and attach")
 @click.option("--private", "is_private", is_flag=True, help="Publish as private note")
 @structured_output_options
 @click.pass_context
@@ -27,7 +38,7 @@ def post(
     title: str,
     body: str,
     images: tuple[str, ...],
-    topic: str | None,
+    topics_flag: tuple[str, ...],
     is_private: bool,
     as_json: bool,
     as_yaml: bool,
@@ -42,16 +53,25 @@ def post(
             file_ids.append(permit["fileId"])
             print_success(f"Uploaded: {img_path}")
 
-        topics = []
-        if topic:
-            topic_data = client.search_topics(topic)
-            topics = select_topic_payload(topic_data, topic)
+        # Combine CLI --topic flags with hashtags found in the body text
+        body_hashtags = extract_hashtags(body)
+        all_topics = list(topics_flag) + body_hashtags
+        unique_topics = list(dict.fromkeys(all_topics))  # deduplicate, preserve order
+
+        if len(unique_topics) > 10:
+            print_info(f"Found {len(unique_topics)} topics, using first 10")
+            unique_topics = unique_topics[:10]
+
+        resolved_topics = []
+        for t in unique_topics:
+            topic_data = client.search_topics(t)
+            resolved_topics.extend(select_topic_payload(topic_data, t))
 
         return client.create_image_note(
             title=title,
             desc=body,
             image_file_ids=file_ids,
-            topics=topics,
+            topics=resolved_topics,
             is_private=is_private,
         )
 
