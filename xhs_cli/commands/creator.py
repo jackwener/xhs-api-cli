@@ -31,6 +31,7 @@ def extract_hashtags(body: str) -> list[str]:
 @click.option("--images", required=True, multiple=True, help="Image file path(s)")
 @click.option("--topic", "topics_flag", multiple=True, help="Topic(s)/hashtag(s) to search and attach")
 @click.option("--private", "is_private", is_flag=True, help="Publish as private note")
+@click.option("--ai-generated", is_flag=True, help="Mark the note as containing AI-generated content")
 @structured_output_options
 @click.pass_context
 def post(
@@ -40,6 +41,7 @@ def post(
     images: tuple[str, ...],
     topics_flag: tuple[str, ...],
     is_private: bool,
+    ai_generated: bool,
     as_json: bool,
     as_yaml: bool,
 ):
@@ -73,6 +75,7 @@ def post(
             image_file_ids=file_ids,
             topics=resolved_topics,
             is_private=is_private,
+            ai_generated=ai_generated,
         )
 
     handle_command(

@@ -577,6 +577,7 @@ class CreatorEndpointsMixin:
         image_file_ids: list[str],
         topics: list[dict[str, str]] | None = None,
         is_private: bool = False,
+        ai_generated: bool = False,
     ) -> Any:
         images = [{"file_id": fid, "metadata": {"source": -1}} for fid in image_file_ids]
         business_binds = {
@@ -586,6 +587,8 @@ class CreatorEndpointsMixin:
             "notePostTiming": {"postTime": None},
             "noteCollectionBind": {"id": ""},
         }
+        if ai_generated:
+            business_binds["userDeclarationBind"] = {"origin": 2}
         data = {
             "common": {
                 "type": "normal",
