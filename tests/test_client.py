@@ -1,5 +1,6 @@
 """Unit tests for XHS client request payloads, cookies, and endpoint selection."""
 
+import json
 from collections import OrderedDict
 
 import httpx
@@ -32,6 +33,31 @@ class TestFavorites:
 
 
 class TestCreatorEndpoints:
+    def test_create_image_note_can_mark_ai_generated_content(self, monkeypatch):
+        captured = {}
+
+        def fake_post(self, uri, data, header_overrides=None):
+            captured["uri"] = uri
+            captured["data"] = data
+            return {"id": "note-123"}
+
+        monkeypatch.setattr(XhsClient, "_main_api_post", fake_post)
+
+        client = XhsClient({"a1": "cookie"})
+        try:
+            client.create_image_note(
+                title="title",
+                desc="body",
+                image_file_ids=["file-1"],
+                ai_generated=True,
+            )
+        finally:
+            client.close()
+
+        business_binds = json.loads(captured["data"]["common"]["business_binds"])
+        assert captured["uri"] == "/web_api/sns/v2/note"
+        assert business_binds["userDeclarationBind"] == {"origin": 2}
+
     def test_creator_note_list_uses_v2_endpoint(self, monkeypatch):
         captured = {}
 
