@@ -173,6 +173,24 @@ def normalize_creator_notes(data: Any) -> list[dict[str, Any]]:
     return normalized
 
 
+def normalize_creator_note_data(data: Any) -> list[dict[str, Any]]:
+    notes = data if isinstance(data, list) else data.get("notes", data.get("note_list", data.get("note_infos", [])))
+    normalized = []
+    for note in notes:
+        normalized.append({
+            "title": note.get("title", "")[:40],
+            "note_id": note.get("id", note.get("note_id", "")),
+            "view_count": str(note.get("read_count", note.get("view_count", ""))),
+            "imp_count": str(note.get("imp_count", "")),
+            "liked_count": str(note.get("like_count", note.get("liked_count", ""))),
+            "collected_count": str(note.get("fav_count", note.get("collected_count", ""))),
+            "comment_count": str(note.get("comment_count", "")),
+            "share_count": str(note.get("share_count", "")),
+            "click_rate": f"{note['coverClickRate'] * 100:.1f}%" if "coverClickRate" in note else "-",
+        })
+    return normalized
+
+
 def normalize_notifications(data: dict[str, Any]) -> list[dict[str, Any]]:
     normalized = []
     for message in data.get("message_list", []):

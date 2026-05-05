@@ -7,6 +7,7 @@ commands should import from.
 
 from .formatter_renderers import (  # noqa: F401
     render_comments,
+    render_creator_note_data,
     render_creator_notes,
     render_feed,
     render_note,
