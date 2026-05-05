@@ -9,6 +9,7 @@ from rich.table import Table
 
 from .formatter_normalizers import (
     normalize_comments,
+    normalize_creator_note_data,
     normalize_creator_notes,
     normalize_feed,
     normalize_note_detail,
@@ -282,6 +283,40 @@ def render_creator_notes(data: Any) -> None:
     for i, note in enumerate(notes, 1):
         status = "✅" if note["status"] in (None, 0, "published") else "⏳"
         table.add_row(str(i), note["title"], note["liked"], note["comment_count"], status, note["note_id"])
+
+    console.print(table)
+
+
+def render_creator_note_data(data: Any) -> None:
+    """Render creator's note analyze data."""
+    notes = normalize_creator_note_data(data)
+    if not notes:
+        print_info("No data found")
+        return
+
+    table = Table(title="笔记分析数据", show_lines=True)
+    table.add_column("#", style="dim", width=3)
+    table.add_column("标题", width=30)
+    table.add_column("点击率", justify="right", width=8)
+    table.add_column("曝光", justify="right", width=8)
+    table.add_column("👁️", justify="right", width=8)
+    table.add_column("❤️", justify="right", width=6)
+    table.add_column("⭐", justify="right", width=6)
+    table.add_column("💬", justify="right", width=6)
+    table.add_column("🔗", justify="right", width=6)
+
+    for i, note in enumerate(notes, 1):
+        table.add_row(
+            str(i),
+            note["title"],
+            note["click_rate"],
+            note["imp_count"],
+            note["view_count"],
+            note["liked_count"],
+            note["collected_count"],
+            note["comment_count"],
+            note["share_count"],
+        )
 
     console.print(table)
 

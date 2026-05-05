@@ -108,6 +108,7 @@ cli.add_command(social.likes)
 
 cli.add_command(creator.post)
 cli.add_command(creator.my_notes)
+cli.add_command(creator.my_notes_data)
 cli.add_command(creator.delete)
 
 # ─── Notification commands ──────────────────────────────────────────────────

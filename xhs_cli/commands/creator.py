@@ -10,6 +10,7 @@ from ..formatter import (
     maybe_print_structured,
     print_info,
     print_success,
+    render_creator_note_data,
     render_creator_notes,
 )
 from ..note_refs import save_index_from_notes
@@ -100,6 +101,25 @@ def my_notes(ctx, page: int, as_json: bool, as_yaml: bool):
         ctx,
         action=_my_notes_action,
         render=render_creator_notes,
+        as_json=as_json,
+        as_yaml=as_yaml,
+    )
+
+
+@click.command("my-notes-data")
+@click.option("--page", default=1, help="Page number (1-indexed)")
+@click.option("--page-size", default=10, help="Page size")
+@structured_output_options
+@click.pass_context
+def my_notes_data(ctx, page: int, page_size: int, as_json: bool, as_yaml: bool):
+    """List your own published notes data."""
+    def _my_notes_data_action(client):
+        return client.get_creator_note_analyze_list(page_num=page, page_size=page_size)
+
+    handle_command(
+        ctx,
+        action=_my_notes_data_action,
+        render=render_creator_note_data,
         as_json=as_json,
         as_yaml=as_yaml,
     )

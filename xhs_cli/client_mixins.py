@@ -627,6 +627,13 @@ class CreatorEndpointsMixin:
             "page": page,
         })
 
+    def get_creator_note_analyze_list(self, type: int = 0, page_size: int = 10, page_num: int = 1) -> dict[str, Any]:
+        return self._creator_get("/api/galaxy/creator/datacenter/note/analyze/list", {
+            "type": type,
+            "page_size": page_size,
+            "page_num": page_num,
+        })
+
 
 class SocialEndpointsMixin:
     """Social graph and saved-content endpoints."""
