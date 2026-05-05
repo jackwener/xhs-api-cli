@@ -105,6 +105,24 @@ def my_notes(ctx, page: int, as_json: bool, as_yaml: bool):
     )
 
 
+@click.command("my-notes-data")
+@click.option("--page", default=1, help="Page number (1-indexed)")
+@structured_output_options
+@click.pass_context
+def my_notes_data(ctx, page: int, as_json: bool, as_yaml: bool):
+    """List your own published notes data."""
+    def _my_notes_data_action(client):
+        return client.get_creator_note_analyze_list(page_num=page)
+
+    handle_command(
+        ctx,
+        action=_my_notes_data_action,
+        render=None,
+        as_json=as_json,
+        as_yaml=as_yaml or not as_json,
+    )
+
+
 @click.command("delete")
 @click.argument("id_or_url")
 @structured_output_options
