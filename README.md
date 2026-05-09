@@ -18,6 +18,7 @@ A CLI for Xiaohongshu (小红书) — search, read, interact, and post via rever
 ## Features
 
 - 🔐 **Auth** — auto-extract browser cookies, QR code login, status check, whoami
+- 🌐 **Domain target** — works against `xiaohongshu.com` (default) or `rednote.com` (international re-skin) via `XHS_TARGET`
 - 🔍 **Search** — notes by keyword, user search, topic search
 - 📖 **Reading** — note detail, comments, sub-comments, user profiles
 - 🔢 **Short-index navigation** — open recent list results with `xhs read 1` or `xhs comments 1`
@@ -160,6 +161,18 @@ Other authenticated commands automatically retry once with fresh browser cookies
 
 Saved cookies are valid for **7 days** by default. After that, the client automatically attempts to refresh from the browser. If browser extraction fails, the existing cookies are used with a warning.
 
+### Targeting rednote.com (international)
+
+Set `XHS_TARGET=rednote` to point the CLI at the international `rednote.com` domain instead of `xiaohongshu.com`. Both share the same backend, API surface, and signing scheme — only host names and cookie domain differ.
+
+```bash
+XHS_TARGET=rednote xhs login          # extract cookies from a logged-in rednote.com browser session
+XHS_TARGET=rednote xhs login --qrcode # browser-assisted QR via www.rednote.com/login
+XHS_TARGET=rednote xhs whoami
+```
+
+Sessions are stored separately (`cookies.rednote.json` vs `cookies.json`) so you can keep both logged in. Default behavior is unchanged when `XHS_TARGET` is unset.
+
 ### Short-Index Navigation
 
 After any listing command such as `search`, `feed`, `hot`, `user-posts`, `favorites`, or `my-notes`, the CLI stores the latest ordered note list in `~/.xiaohongshu-cli/index_cache.json`.
@@ -174,6 +187,7 @@ After any listing command such as `search`, `feed`, `hot`, `user-posts`, `favori
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OUTPUT` | `auto` | Output format: `json`, `yaml`, `rich`, or `auto` (→ YAML when non-TTY) |
+| `XHS_TARGET` | `xiaohongshu` | Target domain: `xiaohongshu` (xiaohongshu.com) or `rednote` (rednote.com, international). Cookie/cache files are namespaced per target. |
 ## Rate Limiting & Anti-Detection
 
 xiaohongshu-cli includes comprehensive anti-risk-control measures designed to minimize detection:
@@ -285,9 +299,13 @@ uv run ruff check .
 
 **Q: `NoCookieError: No 'a1' cookie found`**
 
-1. Open any browser and visit https://www.xiaohongshu.com/
+1. Open any browser and visit https://www.xiaohongshu.com/ (or https://www.rednote.com/ if using `XHS_TARGET=rednote`)
 2. Log in with your account
 3. Run `xhs login` (auto-detects browser) or `xhs login --cookie-source <browser>`
+
+**Q: I'm in a region where xiaohongshu.com doesn't work / I want to use rednote.com**
+
+Set `XHS_TARGET=rednote` (env var) before any `xhs` command. See [Targeting rednote.com](#targeting-rednotecom-international) above. Both targets use the same backend and signing — switching is just a host swap.
 
 **Q: `NeedVerifyError: Captcha required`**
 
@@ -317,6 +335,7 @@ The built-in Gaussian jitter delay (~1-1.5s between requests) is intentional to 
 ## 功能特性
 
 - 🔐 **认证** — 自动提取浏览器 Cookie，browser-assisted 二维码扫码登录，状态检查，用户信息
+- 🌐 **域名切换** — 默认 `xiaohongshu.com`，通过 `XHS_TARGET=rednote` 可切换到国际版 `rednote.com`
 - 🔍 **搜索** — 按关键词搜索笔记、用户、话题
 - 📖 **阅读** — 笔记详情、评论、子评论、用户主页
 - 📰 **发现** — 推荐 Feed、按分类浏览热门
@@ -437,6 +456,16 @@ xiaohongshu-cli 支持多种认证方式：
 Cookie 保存后有效期 **7 天**，超时后自动尝试从浏览器刷新。
 
 `xhs login` 会自动尝试所有已安装浏览器，使用第一个有有效 Cookie 的浏览器。也可用 `--cookie-source <browser>` 指定浏览器，或 `--qrcode` 使用 browser-assisted 二维码登录。其他需认证命令在 session 过期时会自动重试一次。
+
+### 切换到国际版 rednote.com
+
+设置 `XHS_TARGET=rednote` 即可让 CLI 指向国际版 `rednote.com`（与 `xiaohongshu.com` 共用同一后端、API 和签名方案，仅域名和 Cookie 域不同）。两套 session 分别保存（`cookies.rednote.json` / `cookies.json`），可同时登录。
+
+```bash
+XHS_TARGET=rednote xhs login          # 从已登录的 rednote.com 浏览器会话提取 Cookie
+XHS_TARGET=rednote xhs login --qrcode # 通过 www.rednote.com/login 进行扫码登录
+XHS_TARGET=rednote xhs whoami
+```
 
 ## 常见问题
 
