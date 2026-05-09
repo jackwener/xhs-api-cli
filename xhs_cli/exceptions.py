@@ -51,14 +51,16 @@ class NoCookieError(XhsApiError):
     """Raised when no valid cookies are found."""
 
     def __init__(self, source: str, details: str = ""):
+        from .constants import COOKIE_DOMAIN, HOME_URL
+
         if source == "auto":
-            msg = "No 'a1' cookie found for xiaohongshu.com in any installed browser."
+            msg = f"No 'a1' cookie found for {COOKIE_DOMAIN} in any installed browser."
         else:
-            msg = f"No 'a1' cookie found for xiaohongshu.com in {source}."
+            msg = f"No 'a1' cookie found for {COOKIE_DOMAIN} in {source}."
         if details:
             msg += f"\n{details}"
         msg += "\n\nTroubleshooting:\n"
-        msg += "  1. Open a browser and visit https://www.xiaohongshu.com/\n"
+        msg += f"  1. Open a browser and visit {HOME_URL}/\n"
         msg += "  2. Make sure you are logged in\n"
         msg += "  3. Try: xhs login --cookie-source <browser>"
         super().__init__(msg)

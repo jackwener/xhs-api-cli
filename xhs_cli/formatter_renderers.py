@@ -19,9 +19,8 @@ from .formatter_normalizers import (
     normalize_user_posts,
     normalize_users,
 )
+from .constants import HOME_URL
 from .formatter_utils import coerce_int, console, format_count, print_error, print_info
-
-HOME_URL = "https://www.xiaohongshu.com"
 
 
 def _build_note_url(

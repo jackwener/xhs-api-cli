@@ -39,7 +39,7 @@ from .formatter_utils import (  # noqa: F401
 
 def parse_note_reference(id_or_url: str) -> tuple[str, str, str]:
     """Extract note ID, xsec_token, and xsec_source from a URL or plain ID."""
-    if "xiaohongshu.com" in id_or_url:
+    if "xiaohongshu.com" in id_or_url or "rednote.com" in id_or_url:
         from urllib.parse import parse_qs, urlparse
 
         parsed = urlparse(id_or_url)

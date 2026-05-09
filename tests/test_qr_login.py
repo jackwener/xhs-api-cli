@@ -220,11 +220,13 @@ def test_qrcode_login_falls_back_when_browser_backend_unavailable(monkeypatch):
 
 
 def test_normalize_browser_cookies_uses_allowlist():
+    from xhs_cli.constants import COOKIE_DOMAIN
+
     cookies = _normalize_browser_cookies([
-        {"name": "a1", "value": "a1-value", "domain": ".xiaohongshu.com"},
-        {"name": "web_session", "value": "session-value", "domain": ".xiaohongshu.com"},
-        {"name": "customer-sso-sid", "value": "skip-me", "domain": ".xiaohongshu.com"},
-        {"name": "creator_only", "value": "skip-me-too", "domain": "creator.xiaohongshu.com"},
+        {"name": "a1", "value": "a1-value", "domain": f".{COOKIE_DOMAIN}"},
+        {"name": "web_session", "value": "session-value", "domain": f".{COOKIE_DOMAIN}"},
+        {"name": "customer-sso-sid", "value": "skip-me", "domain": f".{COOKIE_DOMAIN}"},
+        {"name": "creator_only", "value": "skip-me-too", "domain": f"creator.{COOKIE_DOMAIN}"},
     ])
 
     assert cookies == {

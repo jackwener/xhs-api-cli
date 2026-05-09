@@ -19,12 +19,12 @@ import time
 from typing import Any
 
 from .client import XhsClient
+from .constants import COOKIE_DOMAIN, LOGIN_URL
 from .cookies import save_cookies
 from .exceptions import NeedVerifyError, XhsApiError
 
 logger = logging.getLogger(__name__)
 
-LOGIN_URL = "https://www.xiaohongshu.com/login"
 QR_CREATE_ENDPOINT = "/api/sns/web/v1/login/qrcode/create"
 QR_USERINFO_ENDPOINT = "/api/qrcode/userinfo"
 QR_STATUS_ENDPOINT = "/api/sns/web/v1/login/qrcode/status"
@@ -111,7 +111,7 @@ def _normalize_browser_cookies(raw_cookies: list[dict[str, Any]]) -> dict[str, s
             continue
         if name not in BROWSER_EXPORT_COOKIE_NAMES:
             continue
-        if not isinstance(domain, str) or "xiaohongshu.com" not in domain:
+        if not isinstance(domain, str) or COOKIE_DOMAIN not in domain:
             continue
         cookies[name] = value
     return cookies
