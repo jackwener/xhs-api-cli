@@ -13,7 +13,13 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
-from .constants import CONFIG_DIR_NAME, COOKIE_FILE, INDEX_CACHE_FILE, TOKEN_CACHE_FILE
+from .constants import (
+    CONFIG_DIR_NAME,
+    COOKIE_DOMAIN,
+    COOKIE_FILE,
+    INDEX_CACHE_FILE,
+    TOKEN_CACHE_FILE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -359,12 +365,12 @@ def _extract_in_process(source: str) -> dict[str, str] | None:
         return None
 
     try:
-        jar = loader(domain_name=".xiaohongshu.com")
+        jar = loader(domain_name=f".{COOKIE_DOMAIN}")
     except Exception as exc:
         logger.debug("%s in-process extraction failed: %s", source, exc)
         return None
 
-    cookies = {cookie.name: cookie.value for cookie in jar if "xiaohongshu.com" in (cookie.domain or "")}
+    cookies = {cookie.name: cookie.value for cookie in jar if COOKIE_DOMAIN in (cookie.domain or "")}
     if cookies.get("a1"):
         logger.debug("Loaded XHS cookies from %s in-process", source)
         return cookies
@@ -384,14 +390,15 @@ except ImportError:
     sys.exit(0)
 
 source = sys.argv[1]
+domain = sys.argv[2]
 loader = getattr(bc3, source, None)
 if not loader or not callable(loader):
     print(json.dumps({"error": f"Unknown browser: {source}"}))
     sys.exit(0)
 
 try:
-    cj = loader(domain_name=".xiaohongshu.com")
-    cookies = {c.name: c.value for c in cj if "xiaohongshu.com" in (c.domain or "")}
+    cj = loader(domain_name=f".{domain}")
+    cookies = {c.name: c.value for c in cj if domain in (c.domain or "")}
     if cookies.get("a1"):
         print(json.dumps({"browser": source, "cookies": cookies}))
     else:
@@ -402,7 +409,7 @@ except Exception as e:
 
     try:
         result = subprocess.run(
-            [sys.executable, "-c", extract_script, source],
+            [sys.executable, "-c", extract_script, source, COOKIE_DOMAIN],
             capture_output=True,
             text=True,
             timeout=15,
